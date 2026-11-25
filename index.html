@@ -1,0 +1,2013 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Интерфейс для птицы — поиск еды в городской среде</title>
+<meta name="description" content="Практическое задание № 5. Трёхмерный интерфейс для городской птицы: летний день, взгляд, запах и слух.">
+<style>
+/* ============================================================
+   Интерфейс для птицы · «полевой прибор»
+   ============================================================ */
+:root{
+  --glass:rgba(24,22,38,.74);
+  --glass-2:rgba(24,22,38,.55);
+  --on:#F3F0FA;
+  --on-2:#C9C3DB;
+  --on-3:#8F88A8;
+  --acc:#B48CFF;
+  --acc-2:#7C5CE0;
+  --warn:#FF5A4E;
+  --food:#FFD84A;
+  --smell:#C9E46A;
+  --pg:#F5F5F8;
+  --pg-ink:#1D2030;
+  --pg-ink-2:#4F5469;
+  --pg-ink-3:#8A8FA3;
+  --pg-line:#DEDFE8;
+  --pg-acc:#5A45D6;
+  --head:"Avenir Next","Montserrat","Segoe UI","Helvetica Neue",Arial,sans-serif;
+  --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono:"SF Mono",ui-monospace,Menlo,Consolas,"Liberation Mono",monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:#1A1826;color:var(--on);font-family:var(--sans);overflow:hidden;-webkit-font-smoothing:antialiased}
+body{overscroll-behavior:none}
+#scene{position:fixed;inset:0;width:100vw;height:100vh;display:block;touch-action:none;cursor:none;outline:none}
+#ov{position:fixed;inset:0;width:100vw;height:100vh;pointer-events:none;z-index:2}
+#noGL{display:none;position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:8;max-width:420px;text-align:center;font-size:16px;background:var(--glass);color:var(--on);border-radius:14px;padding:20px}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.panel{background:var(--glass);-webkit-backdrop-filter:blur(12px) saturate(1.2);backdrop-filter:blur(12px) saturate(1.2);border-radius:14px;box-shadow:0 10px 30px rgba(10,8,20,.25)}
+
+#human{position:fixed;inset:0;pointer-events:none;transition:opacity .5s ease;z-index:5}
+#human.off{opacity:0}
+#human.off *{pointer-events:none!important}
+.h-top{position:absolute;left:max(18px,env(safe-area-inset-left));right:max(18px,env(safe-area-inset-right));top:max(14px,env(safe-area-inset-top));display:flex;justify-content:space-between;align-items:flex-start;gap:14px}
+.brand{padding:10px 14px 11px}
+.brand .t{font-family:var(--head);font-weight:700;font-size:15px;letter-spacing:.01em}
+.brand .s{font-size:11.5px;color:var(--on-2);margin-top:2px}
+.keys{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:6px;max-width:560px;padding:7px;font-size:12px}
+.keys span{pointer-events:auto;cursor:pointer;white-space:nowrap;padding:5px 10px;border-radius:999px;background:rgba(255,255,255,.08);color:var(--on-2);transition:background .2s}
+.keys span:hover{background:rgba(255,255,255,.16);color:var(--on)}
+.keys b{font-family:var(--mono);font-weight:600;font-size:11px;color:var(--acc);margin-right:6px}
+.keys .on{background:rgba(180,140,255,.25);color:var(--on)}
+.keys .aboutLink{background:var(--acc-2);color:#fff}
+.keys .aboutLink b{color:#fff;opacity:.8}
+
+.task{position:absolute;left:max(18px,env(safe-area-inset-left));bottom:max(16px,env(safe-area-inset-bottom));width:min(430px,calc(50vw - 90px));padding:14px 16px 15px}
+.task .k{font-family:var(--head);font-size:10.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--acc)}
+.task .goal{font-family:var(--head);font-size:17px;font-weight:600;margin-top:4px;line-height:1.3}
+.sunbar{position:relative;height:6px;border-radius:3px;background:linear-gradient(90deg,#F7C98B,#F3E6B5 25%,#E7EEF7 55%,#B9A4D8 82%,#3A3560);margin:10px 0 2px}
+.sunbar i{position:absolute;top:50%;width:12px;height:12px;border-radius:50%;background:#fff;border:2px solid #24213A;transform:translate(-50%,-50%);box-shadow:0 0 0 3px rgba(255,255,255,.25)}
+.sunlbl{display:flex;justify-content:space-between;font-size:10.5px;color:var(--on-3)}
+.res{display:flex;align-items:center;gap:10px;margin-top:10px;font-size:12.5px;color:var(--on-2)}
+.res .bar{position:relative;flex:1;height:8px;border-radius:4px;background:rgba(255,255,255,.12);overflow:hidden}
+.res .fillb{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,var(--acc-2),var(--acc));border-radius:4px;transition:width .3s}
+.res .need{position:absolute;top:-2px;bottom:-2px;width:2px;background:#fff}
+.res b{color:var(--on);font-weight:600;min-width:78px;text-align:right}
+.line{font-size:15px;line-height:1.45;margin-top:12px;padding-top:11px;border-top:1px solid rgba(255,255,255,.12);min-height:3em;transition:opacity .35s}
+.line.fade{opacity:0}
+.line.ev{color:#FFD9D4}
+.line.good{color:#E2F5C8}
+.ctl{margin-top:9px;font-size:11.5px;color:var(--on-3)}
+.ctl b{color:var(--on-2);font-weight:600}
+
+.legend{position:absolute;right:max(18px,env(safe-area-inset-right));bottom:max(16px,env(safe-area-inset-bottom));width:min(330px,calc(50vw - 90px));padding:12px 14px 13px;font-size:12px;color:var(--on-2)}
+.legend .k{font-family:var(--head);font-size:10.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--acc);margin-bottom:8px;display:flex;justify-content:space-between;align-items:center}
+.legend .k span{pointer-events:auto;cursor:pointer;color:var(--on-3);letter-spacing:.04em;text-transform:none;font-weight:500}
+.legend .li{display:flex;align-items:center;gap:10px;padding:3px 0;line-height:1.3}
+.legend svg{width:30px;height:20px;flex:none;overflow:visible}
+.legend.min .li{display:none}
+
+#intro{position:fixed;left:50%;top:50%;transform:translate(-50%,-54%);width:min(540px,calc(100vw - 32px));pointer-events:auto;cursor:pointer;z-index:7;transition:opacity .8s ease;padding:28px 30px 24px;color:var(--on)}
+#intro.gone{opacity:0;pointer-events:none}
+#intro .tag{font-family:var(--head);font-size:10.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--acc)}
+#intro h1{font-family:var(--head);font-weight:700;font-size:clamp(24px,3.2vw,32px);line-height:1.15;margin:10px 0 4px}
+#intro .sub{color:var(--on-2);font-size:15px}
+#intro ul{list-style:none;padding:0;margin:18px 0 0;display:grid;gap:9px}
+#intro li{display:flex;gap:12px;align-items:flex-start;font-size:13.5px;line-height:1.45;color:var(--on-2)}
+#intro li b{color:var(--on)}
+#intro li i{flex:none;width:26px;height:26px;border-radius:8px;background:rgba(180,140,255,.2);color:var(--acc);font-style:normal;font-family:var(--mono);font-size:12px;display:flex;align-items:center;justify-content:center}
+#intro .go{margin-top:20px;display:inline-block;padding:9px 18px;border-radius:999px;background:var(--acc-2);color:#fff;font-family:var(--head);font-weight:600;font-size:13px}
+
+#pauseNote{position:fixed;left:50%;top:44%;transform:translate(-50%,-50%);z-index:7;font-family:var(--head);font-weight:700;font-size:22px;letter-spacing:.18em;text-align:center;pointer-events:none;opacity:0;transition:opacity .3s;padding:14px 26px;color:var(--on)}
+#pauseNote small{display:block;font-family:var(--sans);font-weight:400;font-size:12px;letter-spacing:.04em;color:var(--on-3);margin-top:6px}
+#pauseNote.on{opacity:1}
+#finale{position:fixed;left:50%;top:44%;transform:translate(-50%,-50%);width:min(560px,calc(100vw - 32px));z-index:7;pointer-events:none;opacity:0;transition:opacity 1.2s ease;padding:24px 26px;color:var(--on)}
+#finale.on{opacity:1}
+#finale .t{font-size:15px;line-height:1.5;color:var(--on-2)}
+#finale .t h2{font-family:var(--head);font-size:clamp(19px,2.4vw,24px);line-height:1.25;color:var(--on);margin:0 0 10px}
+#finale .t ul{margin:10px 0 0;padding-left:18px}
+#finale .t li.bad{color:#FFC4BD}
+#finale .s{margin-top:14px;font-size:12px;color:var(--on-3)}
+#finale .s b{font-family:var(--mono);color:var(--acc)}
+
+/* ---------- страница проекта ---------- */
+#about{position:fixed;inset:0;z-index:20;background:var(--pg);color:var(--pg-ink);overflow-y:auto;-webkit-overflow-scrolling:touch;font-family:var(--sans);opacity:0;visibility:hidden;transition:opacity .3s ease,visibility 0s linear .3s}
+#about.open{opacity:1;visibility:visible;transition:opacity .3s ease}
+#about .layout{max-width:860px;margin:0 auto;padding:0 28px}
+#about aside{position:sticky;top:0;align-self:start;height:100vh;padding:34px 0;display:flex;flex-direction:column;gap:4px;font-size:13px}
+#about aside .logo{font-family:var(--head);font-weight:700;font-size:16px;line-height:1.25;margin-bottom:18px}
+#about aside .logo small{display:block;font-family:var(--sans);font-weight:400;font-size:12px;color:var(--pg-ink-3);margin-top:3px}
+#about aside a{color:var(--pg-ink-2);text-decoration:none;padding:6px 10px;border-radius:8px}
+#about aside a:hover{background:#E9E8F3;color:var(--pg-ink)}
+#about aside .close{margin-top:auto;cursor:pointer;background:var(--pg-ink);color:#fff;border-radius:999px;padding:9px 14px;text-align:center;font-weight:600}
+#about main{padding:28px 0 90px}
+#about .topbar{position:sticky;top:0;z-index:2;display:flex;justify-content:space-between;align-items:center;padding:14px 0;background:var(--pg);border-bottom:1px solid var(--pg-line)}
+#about .topbar b{font-family:var(--head);font-size:15px}
+#about .topbar .close{cursor:pointer;background:var(--pg-ink);color:#fff;border-radius:999px;padding:8px 14px;font-size:13px;font-weight:600}
+#about h1{font-family:var(--head);font-weight:700;font-size:34px;line-height:1.15;margin:0}
+#about section{margin-top:44px}
+#about section:first-of-type{margin-top:10px}
+#about .ch{display:inline-block;font-family:var(--head);font-weight:700;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--pg-acc);background:#E7E3FB;border-radius:999px;padding:4px 10px}
+#about h2{font-family:var(--head);font-weight:700;font-size:25px;line-height:1.2;margin:10px 0 14px}
+#about h3{font-family:var(--head);font-weight:700;font-size:15px;margin:26px 0 8px}
+#about p,#about li{font-size:16px;line-height:1.62}
+#about p{margin:0 0 13px}
+#about ul,#about ol{padding-left:22px;margin:0 0 14px}
+#about .lead{font-size:18px;color:var(--pg-ink-2)}
+#about .cover{background:#fff;border:1px solid var(--pg-line);border-radius:18px;padding:30px 30px 24px;margin-top:8px}
+#about .cover .k{font-family:var(--head);font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--pg-ink-3)}
+#about .cover .disc{font-size:16px;margin:4px 0 22px}
+#about .fields{display:grid;grid-template-columns:170px 1fr;gap:10px 18px;margin-top:20px;font-size:14px}
+#about .fields div:nth-child(odd){color:var(--pg-ink-3)}
+.fill{display:inline-block;min-width:200px;border-bottom:1px dashed var(--pg-ink-3);color:var(--pg-acc);padding:0 2px;outline:none}
+.fill:focus{border-bottom-style:solid;color:var(--pg-ink)}
+#about .tbl{background:#fff;border:1px solid var(--pg-line);border-radius:14px;overflow:hidden;margin:12px 0 18px}
+#about table{width:100%;border-collapse:collapse;font-size:13.5px;line-height:1.45}
+#about th,#about td{padding:10px 12px;text-align:left;vertical-align:top}
+#about tr+tr td{border-top:1px solid var(--pg-line)}
+#about th{font-family:var(--head);font-weight:700;font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--pg-ink-2);background:#F0EFF6}
+#about td.ok{white-space:nowrap;color:#1E7A57;font-weight:600}
+#about td.no{white-space:nowrap;color:#B23B2E;font-weight:600}
+#about .tag{display:inline-block;font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;white-space:nowrap}
+#about .tag.f{background:#DFF3EA;color:#1E6B4E}
+#about .tag.a{background:#FCEBD9;color:#8A4E14}
+#about .tag.g{background:#E7E3FB;color:#4A37B8}
+#about .note{font-size:14px;color:var(--pg-ink-2);background:#fff;border:1px solid var(--pg-line);border-radius:12px;padding:10px 14px;margin:14px 0}
+#about .flow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:12.5px;margin:12px 0 16px}
+#about .flow span{background:#fff;border:1px solid var(--pg-line);padding:5px 10px;border-radius:999px}
+#about .flow em{font-style:normal;color:var(--pg-ink-3)}
+#about .draft{display:inline-block;font-size:11.5px;font-weight:600;color:#8A4E14;background:#FCEBD9;border-radius:999px;padding:3px 10px;margin-bottom:12px}
+#about .wc{font-size:12.5px;color:var(--pg-ink-3)}
+#about a{color:var(--pg-acc)}
+#about .src li{margin-bottom:12px;font-size:14.5px}
+#about .keys-doc{display:grid;grid-template-columns:140px 1fr;gap:8px 16px;font-size:14px}
+#about .keys-doc b{font-family:var(--mono);font-weight:600;color:var(--pg-acc)}
+#about .foot{margin-top:60px;font-size:12px;color:var(--pg-ink-3)}
+
+@media (max-width:760px){
+  .legend{display:none}
+  .task{width:auto;right:max(12px,env(safe-area-inset-right));left:max(12px,env(safe-area-inset-left));bottom:max(10px,env(safe-area-inset-bottom));padding:11px 13px}
+  .task .goal{font-size:14.5px}
+  .line{font-size:13.5px;margin-top:8px;padding-top:8px;min-height:2.8em}
+  .ctl{display:none}
+  .keys{max-width:62vw;font-size:11px;padding:5px;gap:4px}
+  .keys span{padding:4px 8px}
+  .brand{padding:8px 11px}
+  .brand .s{display:none}
+  #about .layout{grid-template-columns:1fr;padding:0 18px;gap:0}
+  #about aside{position:sticky;height:auto;flex-direction:row;flex-wrap:wrap;padding:10px 0;background:var(--pg);z-index:2;border-bottom:1px solid var(--pg-line)}
+  #about aside .logo,#about aside a:not(.close){display:none}
+  #about aside .close{margin:0 0 0 auto}
+  #about .fields{grid-template-columns:1fr}
+  #about .tbl{overflow-x:auto}
+  #about .keys-doc{grid-template-columns:110px 1fr}
+}
+@media (max-height:560px){ #intro ul{display:none} }
+@media print{
+  html,body{overflow:visible;height:auto;background:#fff;color:#000}
+  #scene,#ov,#noGL,#human,#intro,#pauseNote,#finale,#about .topbar{display:none!important}
+  #about{position:static;opacity:1!important;visibility:visible!important;overflow:visible;background:#fff}
+  #about .layout{display:block;padding:0}
+  #about main{padding:0;max-width:none}
+  #about h2{break-after:avoid}
+  #about .tbl,#about tr{break-inside:avoid}
+  #about #a-title{break-after:page}
+  .fill{color:#111}
+  #about a{color:#111;text-decoration:none}
+  #about a::after{content:" (" attr(href) ")";font-size:11px;color:#444}
+}
+@media (prefers-reduced-motion:reduce){ #intro,#finale,#human,#about{transition-duration:.01s} }
+</style>
+</head>
+<body>
+<canvas id="scene" tabindex="0" aria-label="Летний двор глазами городской птицы, трёхмерная сцена"></canvas>
+<canvas id="ov" aria-hidden="true"></canvas>
+<div id="noGL">Для этой страницы нужен WebGL — включите аппаратное ускорение в браузере. Описание проекта — по кнопке «о проекте».</div>
+
+<div id="human">
+  <div class="h-top">
+    <span id="phase" hidden></span><span></span>
+    <div class="keys panel" id="keys">
+      <span data-key="KeyH"><b>H</b>пояснения</span>
+      <span data-key="KeyP"><b>P</b>пауза</span>
+      <span data-key="KeyM" id="keyM"><b>M</b>звук</span>
+      <span data-key="About" class="aboutLink"><b>D</b>о проекте</span>
+    </div>
+  </div>
+  <div class="task panel" id="taskBox">
+    <div class="k">Задача дня</div>
+    <div class="goal">Набрать запас на ночь до темноты</div>
+    <div class="res"><div class="bar"><div class="fillb" id="resFill"></div><div class="need" id="resNeed"></div></div><b id="resTxt"></b></div>
+    <div class="line" id="stageLine"></div>
+  </div>
+  <div class="legend panel" id="legend">
+    <div class="k">Условные обозначения <span data-legend>свернуть</span></div>
+    <div class="li"><svg viewBox="0 0 30 20"><defs><radialGradient id="lg1"><stop offset="0" stop-color="#B060FF"/><stop offset="1" stop-color="#9650F5" stop-opacity="0"/></radialGradient></defs><circle cx="15" cy="10" r="9" fill="url(#lg1)"/><circle cx="13" cy="10" r="2.6" fill="#E2552B"/><circle cx="17.5" cy="11" r="2.6" fill="#E2552B"/></svg>ультрафиолет ягод — птица видит сама</div>
+    <div class="li"><svg viewBox="0 0 30 20"><circle cx="15" cy="10" r="7.5" fill="none" stroke="#fff" stroke-width="4"/><circle cx="15" cy="10" r="7.5" fill="none" stroke="#A24DFF" stroke-width="2.6"/></svg>самая вкусная кисть (питательность 15)</div>
+    <div class="li"><svg viewBox="0 0 30 20"><defs><radialGradient id="lg3"><stop offset="0" stop-color="#5C503E" stop-opacity=".9"/><stop offset="1" stop-color="#5C503E" stop-opacity="0"/></radialGradient></defs><circle cx="15" cy="10" r="9" fill="url(#lg3)"/></svg>тусклое пятно — подпорченная кисть (питательность 5)</div>
+    <div class="li"><svg viewBox="0 0 30 20"><rect x="4" y="3" width="22" height="14" rx="1" fill="rgba(162,77,255,.15)" stroke="#A24DFF" stroke-width="1.6"/><path d="M6 16 L14 4 M12 16 L20 4 M18 16 L25 6" stroke="#A24DFF" stroke-width="1"/></svg>стекло — прохода нет</div>
+    <div class="li"><svg viewBox="0 0 30 20"><path d="M15 3 L17 6.5 L24 6 L29 8 L23 9.5 L18 10 L18.5 16 L15 17.5 L11.5 16 L12 10 L7 9.5 L1 8 L6 6 L13 6.5 Z" fill="#E8231B" stroke="#3A0B08" stroke-width=".8"/></svg>ястреб: стрелки — с какой стороны</div>
+    <div class="li"><svg viewBox="0 0 30 20"><path d="M5 2 C2 4 3 8 7 9 L9 9.5 C13 8.5 17 10 20 8.5 L22 4.5 L23 6 L24.5 4.5 L25 7 L28 10 L26 11.5 L24 12 L23 16 L24.5 19 L22.5 19 L21 15 L17 14 L13 14 L11 16 L12.5 19 L10.5 19 L8 15 L7 12 C5 10 3.5 8 4 5 C4.5 3 6 3 6.5 3 Z" fill="#E8231B" stroke="#3A0B08" stroke-width=".6"/></svg>кошка: стрелки — с какой стороны</div>
+    <div class="li"><svg viewBox="0 0 30 20"><path d="M10 4 A9 9 0 0 1 10 16 M15 2 A13 13 0 0 1 15 18 M20 0.5 A17 17 0 0 1 20 19.5" fill="none" stroke="#FF6A5E" stroke-width="1.8"/><circle cx="6" cy="10" r="2.5" fill="#FF6A5E"/></svg>тревожный крик соседа (ястреб, кошка)</div>
+    <div class="li"><svg viewBox="0 0 30 20"><circle cx="5" cy="13" r="2.5" fill="#C9E46A" opacity=".6"/><circle cx="12" cy="10" r="3.5" fill="#C9E46A" opacity=".45"/><circle cx="21" cy="8" r="5" fill="#C9E46A" opacity=".3"/></svg>клубочки запаха — ведут к добыче</div>
+    <div class="li"><svg viewBox="0 0 30 20"><defs><radialGradient id="lg4"><stop offset="0" stop-color="#5AFF6E" stop-opacity=".9"/><stop offset="1" stop-color="#5AFF6E" stop-opacity="0"/></radialGradient></defs><circle cx="21" cy="10" r="9" fill="url(#lg4)"/><path d="M21 3 L26 15 L16 15 Z" fill="#2E8A3E"/><circle cx="4" cy="14" r="1.6" fill="#B8FFC4"/><circle cx="9" cy="11" r="2" fill="#B8FFC4"/></svg>ель горит зелёным, к ней бегут огоньки — укрытие</div>
+    <div class="li"><svg viewBox="0 0 30 20"><defs><radialGradient id="lg5" r=".7"><stop offset=".45" stop-color="#EEEEE6" stop-opacity="0"/><stop offset="1" stop-color="#EEEEE6" stop-opacity=".95"/></radialGradient></defs><rect x="1" y="1" width="28" height="18" rx="3" fill="url(#lg5)" stroke="rgba(238,238,230,.5)"/></svg>белёсая пелена по краям — голод; рассеивается, когда птица наелась</div>
+  </div>
+</div>
+
+<div id="intro" class="panel">
+  <div class="tag">поиск еды в городской среде</div>
+  <h1>Интерфейс для птицы</h1>
+  <div class="sub">Вы — городская птица в летний день. До темноты нужно набрать запас на ночь.</div>
+  <ul>
+    <li><i>◎</i><span><b>Курсор — взгляд птицы.</b> Интерфейс отвечает на то, что в центре взгляда; у края экрана птица поворачивает голову.</span></li>
+    <li><i>➚</i><span><b>Клик — лететь туда:</b> к ягодам, кормушке, берёзе, ели. Ошибки возможны — стекло, кошка, ястреб.</span></li>
+    <li><i>≈</i><span><b>Запах и звук.</b> Следите за струйкой запаха и тревожными криками соседа — он кричит, когда видит ястреба или кошку. Белёсая пелена по краям — голод: она рассеивается, когда птица наедается. Звук — клавиша M.</span></li>
+  </ul>
+  <div class="go">Начать</div>
+</div>
+<div id="pauseNote" class="panel">ПАУЗА<small>P — продолжить</small></div>
+<div id="finale" class="panel"><div class="t" id="finaleText"></div><div class="s"><b>R</b> заново · <b>G</b> новый день · <b>D</b> о проекте</div></div>
+<div id="srStatus" class="sr-only" aria-live="polite"></div>
+<article id="about" aria-hidden="true" tabindex="-1" aria-label="О проекте">
+<div class="layout">
+<div class="topbar"><b>Интерфейс для птицы</b><span class="close" data-close-about role="button" tabindex="0">← назад (D или Esc)</span></div>
+<main>
+
+<section id="a-idea">
+  <h2>Идея</h2>
+  <p class="lead">Я делала интерфейс для городской птицы летом, в конце августа, когда уже поспели ягоды. Конкретный вид не выбирала: это что-то среднее между синицей и воробьём, то есть те, кого мы обычно видим во дворе.</p>
+  <p>На экране двор, каким его видит птица. Ей нужно до темноты наесться досыта, на все 100 %, чтобы хватило на ночь. Еда во дворе есть, но с подвохами. Часть ягод подпорчена, гусеница прячется в листве, в окне отражается берёза и кажется, что туда можно лететь, у кормушки сидишь спиной к двору, а под кустом черноплодки прячется кошка.</p>
+  <p>Интерфейс ничего не решает за птицу. Он подсказывает поверх того, что она и так видит, слышит и чует.</p>
+  <h3>Чем птица с интерфейсом отличается от обычной</h3>
+  <div class="tbl"><table>
+    <tr><th>Обычная птица</th><th>С интерфейсом</th></tr>
+    <tr><td>Видит, что ягоды светятся в ультрафиолете, но светятся почти все кисти</td><td>Самая вкусная кисть обведена кольцом, подпорченные становятся тусклыми</td></tr>
+    <tr><td>Не понимает, что окно — это стекло</td><td>Стекло заштриховано</td></tr>
+    <tr><td>Не видит, что у неё за спиной</td><td>Красные стрелки с той стороны, откуда летит ястреб или крадётся кошка</td></tr>
+    <tr><td>Слышит крик соседа, но не знает, откуда он</td><td>От соседа расходятся красные волны</td></tr>
+    <tr><td>Не видит гусеницу: она зелёная и сидит среди зелёных листьев. Чует запах погрызенных листьев, но слабо</td><td>Запах виден зелёными клубочками, которые тянутся от гусеницы к птице</td></tr>
+    <tr><td>При опасности может растеряться</td><td>Всё вокруг темнеет, ель загорается зелёным, и к ней бегут огоньки</td></tr>
+    <tr><td>Чувствует голод, но не знает, хватит ли ей на ночь</td><td>По краям поля зрения белёсая пелена. Она рассеивается, пока птица ест, и пропадает совсем, когда еды хватает</td></tr>
+  </table></div>
+  <h3>Управление</h3>
+  <div class="keys-doc">
+    <b>курсор</b><span>куда смотрит птица; если подвести к краю экрана, она поворачивает голову</span>
+    <b>клик</b><span>полететь туда: к ягодам, кормушке, берёзе, ели (или в окно, если не заметить штриховку)</span>
+    <b>H</b><span>спрятать панели с пояснениями</span>
+    <b>P</b><span>пауза</span>
+    <b>M</b><span>выключить звук</span>
+    <b>D</b><span>эта страница</span>
+  </div>
+</section>
+
+<section id="a-user">
+  <h2>Кто пользователь</h2>
+  <p>Я собрала то, что известно про зрение и поведение мелких птиц, и отдельно отметила, где сама что-то додумала.</p>
+  <div class="tbl"><table>
+    <tr><th style="width:22%">Что</th><th>Как у птицы</th><th style="width:17%"></th></tr>
+    <tr><td>Обзор</td><td>Глаза по бокам головы, поэтому птица видит почти всё вокруг. Обоими глазами сразу — только узкую полосу впереди, а прямо сзади у неё слепое пятно.</td><td><span class="tag f">так и есть</span></td></tr>
+    <tr><td>Цвет</td><td>У птиц четыре вида колбочек, и они видят ультрафиолет. Восковой налёт на ягодах в ультрафиолете светится.</td><td><span class="tag f">так и есть</span></td></tr>
+    <tr><td>Движение</td><td>Птицы замечают очень быстрое движение, намного быстрее нас.</td><td><span class="tag f">так и есть</span></td></tr>
+    <tr><td>Стекло</td><td>Птицы не видят стекло и часто разбиваются об окна, в которых отражаются деревья.</td><td><span class="tag f">так и есть</span></td></tr>
+    <tr><td>Запах</td><td>Синицы умеют находить гусениц по запаху листьев, которые те грызут.</td><td><span class="tag f">так и есть</span></td></tr>
+    <tr><td>Слух</td><td>Когда синица видит хищника, она тонко и высоко кричит. Соседи, даже других видов, сразу прячутся.</td><td><span class="tag f">так и есть</span></td></tr>
+    <tr><td>Гусеницы</td><td>Летом гусеницы — главный корм для синиц. Их трудно заметить: они зелёные и сидят на листьях.</td><td><span class="tag f">так и есть</span></td></tr>
+    <tr><td>Ночь</td><td>За ночь мелкая птица худеет, поэтому днём ей надо есть почти без перерыва.</td><td><span class="tag f">так и есть</span></td></tr>
+    <tr><td>Сама птица</td><td>Собирательная, а не конкретный вид.</td><td><span class="tag a">моё допущение</span></td></tr>
+  </table></div>
+</section>
+
+<section id="a-need">
+  <h2>Что ей нужно</h2>
+  <p>В задании был пример «маркета для птицы». У меня маркет — это двор. У каждого места с едой своя польза и свой риск.</p>
+  <div class="tbl"><table>
+    <tr><th>Где еда</th><th>Сколько даёт и чем опасно</th><th>Что подсказывает интерфейс</th></tr>
+    <tr><td>Рябина</td><td>Самая вкусная кисть — 15, обычная — 10, подпорченная — 5</td><td>Кольцо на лучшей, подпорченные тусклые</td></tr>
+    <tr><td>Черноплодка</td><td>Тоже 15 и 10, но куст низкий, и к нему подкрадывается кошка</td><td>Кольцо на лучшей кисти, тревога, когда кошка рядом</td></tr>
+    <tr><td>Кормушка</td><td>Много семечек, но сюда каждый раз прилетает ястреб</td><td>Крик соседа, стрелки сзади, ель горит зелёным</td></tr>
+    <tr><td>Гусеница на берёзе</td><td>Очень сытно, но её не видно среди листьев</td><td>Показывает струйку запаха и место, откуда он идёт</td></tr>
+    <tr><td>Ель</td><td>Еды нет, зато можно спрятаться и переночевать</td><td>Загорается зелёным при опасности</td></tr>
+  </table></div>
+</section>
+
+<section id="a-percept">
+  <h2>Как это выглядит и почему</h2>
+  <div class="tbl"><table>
+    <tr><th>Что птица воспринимает</th><th>Как я это нарисовала</th></tr>
+    <tr><td>Смотрит изнутри, своими глазами</td><td>Трёхмерный двор от первого лица, снизу виден кончик клюва</td></tr>
+    <tr><td>Широкий обзор и слепое пятно сзади</td><td>Кадр шире обычного. То, что за спиной, показывается стрелками у края</td></tr>
+    <tr><td>Ультрафиолет</td><td>Фиолетовое свечение у ягод, небо чуть сиреневее, чем мы привыкли</td></tr>
+    <tr><td>Подпорченные ягоды</td><td>«Цвета испорченной еды» у птиц нет. Но у подпорченных ягод стирается налёт и пропадает блеск, поэтому интерфейс делает их тусклыми</td></tr>
+    <tr><td>Опасность</td><td>Красный с тёмной обводкой: красный птицы видят хорошо, а в природе красное с чёрным часто значит «не трогай». Ястреб и кошка показываются одинаково</td></tr>
+    <tr><td>Укрытие</td><td>Стрелку птица не поймёт, это наш знак. Поэтому всё вокруг темнеет, ель горит зелёным, и к ней бегут огоньки: на движение птицы реагируют быстрее всего</td></tr>
+    <tr><td>Запах</td><td>Полупрозрачные зелёные клубочки от гусеницы к птице</td></tr>
+    <tr><td>Звук</td><td>Красные волны от того, кто кричит. Если он за кадром — дуги с той стороны</td></tr>
+    <tr><td>Голод</td><td>Белёсая пелена по краям поля зрения, как от слабости. Рассеивается, пока птица ест</td></tr>
+  </table></div>
+</section>
+
+<section id="a-act">
+  <h2>Как управлять</h2>
+  <p>Курсор — это взгляд птицы. Подсказки ярче всего у того, на что она сейчас смотрит, остальные приглушены. Если подвести курсор к краю экрана, птица повернёт голову. По клику она летит в выбранное место и сама начинает клевать.</p>
+  <div class="tbl"><table>
+    <tr><th>Что сделать</th><th>Что будет</th></tr>
+    <tr><td>Клевать</td><td>Запас растёт: с ягод на 15, 10 или 5. Корм не кончается, птица клюёт, пока сама не улетит</td></tr>
+    <tr><td>Полететь в окно</td><td>Удар о стекло, птица падает в траву и теряет силы</td></tr>
+    <tr><td>Есть у кормушки</td><td>Прилетает ястреб, сосед кричит. Если не успеть в ель, ястреб сбивает птицу в траву</td></tr>
+    <tr><td>Есть на черноплодке</td><td>Подкрадывается кошка, сосед кричит. Если не улететь, кошка прыгает, и птица падает в траву</td></tr>
+    <tr><td>Пойти по запаху к берёзе</td><td>Птица находит гусеницу и сильно наедается</td></tr>
+    <tr><td>Наесться и прилететь в ель</td><td>Птица ночует, день заканчивается</td></tr>
+  </table></div>
+</section>
+
+<section id="a-proto">
+  <h2>Как устроен прототип</h2>
+  <ul>
+    <li>Двор каждый раз собирается из одного и того же числа (зерно 30). От него зависят форма деревьев, какие кисти свежие, где дом с окном, где гусеница, откуда дует ветер и с какой стороны прилетит ястреб. Клавиша G даёт другой двор.</li>
+    <li>Окно стоит так, чтобы в нём отражалась настоящая берёза. Поэтому ошибиться легко.</li>
+    <li>Гусеница сидит на погрызенных листьях берёзы, и запах — полупрозрачные зелёные клубочки — тянется от них. Куда бы птица ни улетела, они сразу тянутся к ней и проходят чуть сбоку. Если лететь вдоль них, придёшь к гусенице.</li>
+    <li>Ястреб прилетает каждый раз, когда птица ест у кормушки, а кошка выходит, когда птица кормится на низкой черноплодке. Через полсекунды кричит сосед.</li>
+    <li>День длится около двух с половиной минут. В темноте птица сама летит в ель.</li>
+    <li>Всё нарисовано на WebGL без сторонних библиотек, звуки делаются прямо в браузере. Файл открывается без интернета.</li>
+  </ul>
+</section>
+
+</main>
+</div>
+</article>
+<script>
+(() => {
+'use strict';
+
+/* =====================================================================
+   1. КОНФИГУРАЦИЯ
+   ===================================================================== */
+const CFG = {
+  seed: 30,
+  dprMax: 2, dtMax: 1 / 20, fast: 3,
+  hfov: 100 * Math.PI / 180,          // горизонтальный угол кадра (часть почти кругового обзора)
+  vfovMax: 88 * Math.PI / 180,
+  energy: { start: 0.32, need: 1.0 },
+  lensR: 130,
+  dayLen: 160                           // длина светового дня в секундах модели
+};
+
+/* =====================================================================
+   2. ГЕНЕРАТОР И МАТЕМАТИКА
+   ===================================================================== */
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+function makeRng(seed) {
+  const f = mulberry32(seed >>> 0), r = () => f();
+  r.range = (a, b) => a + (b - a) * f();
+  r.gauss = () => { let u = 0; while (u < 1e-9) u = f(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * f()); };
+  return r;
+}
+function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
+function lerp(a, b, t) { return a + (b - a) * t; }
+function smooth(e0, e1, x) { const t = clamp((x - e0) / (e1 - e0), 0, 1); return t * t * (3 - 2 * t); }
+function easeInOut(t) { t = clamp(t, 0, 1); return t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; }
+function wrap(a) { while (a > Math.PI) a -= 2 * Math.PI; while (a < -Math.PI) a += 2 * Math.PI; return a; }
+const REDUCED = !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+
+const V3 = {
+  add: (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]],
+  sub: (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]],
+  sc: (a, s) => [a[0] * s, a[1] * s, a[2] * s],
+  dot: (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2],
+  cross: (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]],
+  len: a => Math.hypot(a[0], a[1], a[2]),
+  norm: a => { const l = Math.hypot(a[0], a[1], a[2]) || 1; return [a[0] / l, a[1] / l, a[2] / l]; },
+  lerp: (a, b, t) => [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)],
+  bez: (a, c, b, t) => { const u = 1 - t; return [u * u * a[0] + 2 * u * t * c[0] + t * t * b[0], u * u * a[1] + 2 * u * t * c[1] + t * t * b[1], u * u * a[2] + 2 * u * t * c[2] + t * t * b[2]]; }
+};
+function hdist(a, b) { return Math.hypot(a[0] - b[0], a[2] - b[2]); }
+function hdir(a, b) { const dx = b[0] - a[0], dz = b[2] - a[2], l = Math.hypot(dx, dz) || 1; return [dx / l, 0, dz / l]; }
+
+// матрицы 4×4 по столбцам
+const M4 = {
+  ident() { const o = new Float32Array(16); o[0] = o[5] = o[10] = o[15] = 1; return o; },
+  // ось x отражена, чтобы мировой +x был справа при взгляде вдоль +z (азимут = atan2(dx, dz))
+  persp(fy, a, n, f) { const t = 1 / Math.tan(fy / 2), o = new Float32Array(16); o[0] = -t / a; o[5] = t; o[10] = (f + n) / (n - f); o[11] = -1; o[14] = 2 * f * n / (n - f); return o; },
+  look(e, c, u) {
+    const z = V3.norm(V3.sub(e, c)), x = V3.norm(V3.cross(u, z)), y = V3.cross(z, x), o = new Float32Array(16);
+    o[0] = x[0]; o[4] = x[1]; o[8] = x[2];
+    o[1] = y[0]; o[5] = y[1]; o[9] = y[2];
+    o[2] = z[0]; o[6] = z[1]; o[10] = z[2];
+    o[12] = -V3.dot(x, e); o[13] = -V3.dot(y, e); o[14] = -V3.dot(z, e); o[15] = 1; return o;
+  },
+  mul(a, b) { const o = new Float32Array(16); for (let c = 0; c < 4; c++) for (let r = 0; r < 4; r++) { let s = 0; for (let k = 0; k < 4; k++) s += a[k * 4 + r] * b[c * 4 + k]; o[c * 4 + r] = s; } return o; },
+  // поворот: рыскание, тангаж, крен; затем масштаб; затем перенос
+  pose(p, yaw, pitch, roll, s) {
+    s = s || 1;
+    const cy = Math.cos(yaw), sy = Math.sin(yaw), cp = Math.cos(pitch), sp = Math.sin(pitch), cr = Math.cos(roll || 0), sr = Math.sin(roll || 0);
+    // базис: вперёд f, вверх u, вправо r (мировые)
+    const f = [sy * cp, sp, cy * cp];
+    let r0 = [cy, 0, -sy];
+    let u0 = V3.cross(f, r0); // вверх
+    const r = V3.add(V3.sc(r0, cr), V3.sc(u0, sr)), u = V3.sub(V3.sc(u0, cr), V3.sc(r0, sr));
+    const o = new Float32Array(16);
+    o[0] = r[0] * s; o[1] = r[1] * s; o[2] = r[2] * s;
+    o[4] = u[0] * s; o[5] = u[1] * s; o[6] = u[2] * s;
+    o[8] = f[0] * s; o[9] = f[1] * s; o[10] = f[2] * s;
+    o[12] = p[0]; o[13] = p[1]; o[14] = p[2]; o[15] = 1; return o;
+  },
+  trans(p) { const o = M4.ident(); o[12] = p[0]; o[13] = p[1]; o[14] = p[2]; return o; },
+  // отражение в вертикальной плоскости через точку W с нормалью n
+  mirror(W, n) {
+    const o = M4.ident(), d = V3.dot(W, n);
+    for (let c = 0; c < 3; c++) for (let r = 0; r < 3; r++) o[c * 4 + r] = (r === c ? 1 : 0) - 2 * n[r] * n[c];
+    o[12] = 2 * d * n[0]; o[13] = 2 * d * n[1]; o[14] = 2 * d * n[2]; return o;
+  }
+};
+function hex(h) { const n = parseInt(h.slice(1), 16); return [(n >> 16 & 255) / 255, (n >> 8 & 255) / 255, (n & 255) / 255]; }
+function mixc(a, b, t) { return [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)]; }
+
+let S = null, Y = null, rngGen;
+let currentSeed = CFG.seed;
+
+/* =====================================================================
+   3. ДВОР (метры; x — восток, y — вверх, z — север)
+   ===================================================================== */
+function grow3(r, p, dir, len, rad, depth, segs, tips, spread, upBias) {
+  const q = V3.add(p, V3.sc(dir, len));
+  segs.push({ a: p, b: q, r0: rad, r1: rad * 0.72, depth });
+  if (depth <= 0) { tips.push(q); return; }
+  const n = depth > 2 && r() < 0.35 ? 3 : 2, base = r() * 6.283;
+  const up = Math.abs(dir[1]) > 0.95 ? [1, 0, 0] : [0, 1, 0];
+  const A = V3.norm(V3.cross(dir, up)), B = V3.cross(dir, A);
+  for (let k = 0; k < n; k++) {
+    const az = base + k * 6.283 / n + r.gauss() * 0.3, t = spread * r.range(0.75, 1.2);
+    let d = V3.add(V3.sc(dir, Math.cos(t)), V3.add(V3.sc(A, Math.sin(t) * Math.cos(az)), V3.sc(B, Math.sin(t) * Math.sin(az))));
+    d[1] += upBias; d = V3.norm(d);
+    grow3(r, q, d, len * r.range(0.68, 0.82), rad * 0.66, depth - 1, segs, tips, spread * 0.97, upBias);
+  }
+}
+function makeTree(r, kind, x, z) {
+  const o = { kind, x, z, segs: [], tips: [] };
+  if (kind === 'rowan') {
+    const top = 2.1;
+    o.segs.push({ a: [x, 0, z], b: [x + 0.05, top, z], r0: 0.11, r1: 0.08, depth: 9 });
+    grow3(r, [x + 0.05, top, z], [0, 1, 0], 1.05, 0.075, 4, o.segs, o.tips, 0.62, 0.1);
+  } else if (kind === 'birch') {
+    const top = 5.2;
+    o.segs.push({ a: [x, 0, z], b: [x + 0.08, top, z], r0: 0.2, r1: 0.15, depth: 9 });
+    grow3(r, [x + 0.08, top, z], [0, 1, 0], 1.8, 0.12, 5, o.segs, o.tips, 0.5, 0.12);
+    [[2.2, 0.4], [3.1, 2.6], [4.0, 4.6]].forEach(([y, az]) => {
+      const d = V3.norm([Math.cos(az), 0.75, Math.sin(az)]);
+      grow3(r, [x + 0.03, y, z], d, 1.1, 0.06, 3, o.segs, o.tips, 0.5, 0.05);
+    });
+  } else if (kind === 'aronia') {
+    for (let k = 0; k < 5; k++) {
+      const az = k * 1.3 + r() * 0.5, d = V3.norm([Math.cos(az) * 0.35, 1, Math.sin(az) * 0.35]);
+      grow3(r, [x + Math.cos(az) * 0.12, 0, z + Math.sin(az) * 0.12], d, 0.62, 0.035, 3, o.segs, o.tips, 0.45, 0.15);
+    }
+  } else if (kind === 'rosehip') {
+    for (let k = 0; k < 9; k++) {
+      const az = k * 0.7 + r() * 0.4, d = V3.norm([Math.cos(az) * 0.8, 1, Math.sin(az) * 0.8]);
+      grow3(r, [x, 0, z], d, 0.55, 0.025, 2, o.segs, o.tips, 0.5, -0.05);
+    }
+  }
+  return o;
+}
+function makeBerries(r, n, rad, sz) {
+  const out = [];
+  for (let k = 0; k < n; k++) { const a = r() * 6.28, b = r() * 6.28, d = Math.cbrt(r()) * rad; out.push({ o: [Math.cos(a) * Math.cos(b) * d, -Math.abs(Math.sin(b)) * d * 0.8 - 0.02, Math.sin(a) * Math.cos(b) * d], r: sz * r.range(0.85, 1.15) }); }
+  return out;
+}
+
+function generateYard(r) {
+  const j = () => r.range(-0.35, 0.35);
+  const Yd = {};
+  Yd.spruce = { x: -6 + j(), z: 5 + j(), h: 9.5, rad: 2.7 };
+  Yd.rowan = makeTree(r, 'rowan', -1.4 + j(), 10 + j());
+  Yd.birch = makeTree(r, 'birch', 4.8 + j(), 8.6 + j());
+  Yd.aronia = makeTree(r, 'aronia', 6.8 + j(), 3.4 + j());
+  Yd.feeder = { x: 1.2 + j() * 0.5, z: 4.4, y: 1.45 };
+  Yd.rosehip = makeTree(r, 'rosehip', 3.7 + j() * 0.4, 7.0 + j() * 0.4);
+  Yd.seeds = { x: lerp(Yd.feeder.x, Yd.rosehip.x, 0.55), z: lerp(Yd.feeder.z, Yd.rosehip.z, 0.55) };
+  Yd.cat = { x: Yd.rosehip.x + 0.25, z: Yd.rosehip.z + 0.3 };
+  const spr = [Yd.spruce.x, 0, Yd.spruce.z], row = [Yd.rowan.x, 0, Yd.rowan.z], bir = [Yd.birch.x, 0, Yd.birch.z];
+
+  // присады (положение глаза птицы)
+  Yd.perch = {};
+  const dRoost = hdir(spr, [0.5, 0, 6.5]);
+  const rR = spruceR(Yd.spruce, 3.7) + 0.22;
+  Yd.perch.roost = [spr[0] + dRoost[0] * rR, 3.7, spr[2] + dRoost[2] * rR];
+  // рябина: точка осмотра на стороне, обращённой к ели
+  const rt = Yd.rowan.tips.filter(t => t[1] > 2.9);
+  const ys = rt.map(t => t[1]).sort((a, b) => a - b), ym = ys[Math.floor(ys.length * 0.45)] || 3.8;
+  const dRow = hdir(row, Yd.perch.roost);
+  Yd.perch.rowan = [row[0] + dRow[0] * 2.5, ym - 0.35, row[2] + dRow[2] * 2.5];
+  // кисти рябины — ближайшие к точке осмотра концы веток
+  const V = Yd.perch.rowan;
+  const fwd = V3.sc(dRow, -1);
+  const cand = rt.filter(t => V3.len(V3.sub(t, V)) > 0.75 && V3.dot(V3.norm(V3.sub(t, V)), V3.norm([fwd[0], 0.35, fwd[2]])) > 0.72).sort((a, b) => V3.len(V3.sub(a, V)) - V3.len(V3.sub(b, V)));
+  const picked = [];
+  for (const t of cand) { if (picked.every(p => V3.len(V3.sub(p, t)) > 0.5)) picked.push(t); if (picked.length === 6) break; }
+  const fresh = picked.map(() => r() < 0.4);
+  fresh[Math.floor(r() * picked.length)] = true;
+  let si = Math.floor(r() * picked.length); if (fresh.every(f => f)) fresh[si] = false;
+  Yd.clusters = picked.map((t, k) => ({ id: k, kind: 'rowan', pos: [t[0], t[1] - 0.1, t[2]], q: fresh[k] ? r.range(0.8, 0.97) : r.range(0.22, 0.4),
+    berries: makeBerries(r, fresh[k] ? 14 : 11, 0.1, 0.022) }));
+  // лучшая — свежая кисть, до которой ближе всего
+  let best = null; Yd.clusters.forEach(c => { if (c.q > 0.6 && (!best || V3.len(V3.sub(c.pos, V)) < V3.len(V3.sub(best.pos, V)))) best = c; }); Yd.best = best;
+  // черноплодка
+  Yd.aronia.tips.filter(t => t[1] > 1.15).slice(0, 5).forEach((t, k) => Yd.clusters.push({ id: 10 + k, kind: 'aronia', pos: [t[0], t[1] - 0.06, t[2]], q: r.range(0.78, 0.95), berries: makeBerries(r, 10, 0.07, 0.02) }));
+  // шиповник
+  Yd.rosehip.tips.slice(0, 7).forEach((t, k) => Yd.clusters.push({ id: 20 + k, kind: 'rosehip', pos: t, q: 0.4, berries: makeBerries(r, 2, 0.04, 0.045) }));
+
+  // берёза: присада у ствола на стороне рябины
+  const dB = hdir(bir, row);
+  Yd.perch.birch = [bir[0] + dB[0] * 0.5, 3.35, bir[2] + dB[2] * 0.5];
+  Yd.bark = [bir[0] + dB[0] * 0.16, 3.3, bir[2] + dB[2] * 0.16];
+  // кормушка: птица на краю подноса, лицом к ели (путь отхода — вперёд)
+  const fd = [Yd.feeder.x, 0, Yd.feeder.z], dF = hdir(fd, spr);
+  Yd.feederFace = dF;
+  Yd.perch.feeder = [fd[0] - dF[0] * 0.27, Yd.feeder.y + 0.15, fd[2] - dF[2] * 0.27];
+  // черноплодка
+  const aro = [Yd.aronia.x, 0, Yd.aronia.z], dA = hdir(aro, bir);
+  Yd.perch.aronia = [aro[0] + dA[0] * 0.75, 1.5, aro[2] + dA[2] * 0.75];
+  // сало на ветке берёзы, обращённой к черноплодке
+  const dS = hdir(bir, aro);
+  // место для сала: подальше от веток берёзы, на стороне черноплодки
+  const segD = (p, sg) => { const ab = V3.sub(sg.b, sg.a), t = clamp(V3.dot(V3.sub(p, sg.a), ab) / (V3.dot(ab, ab) || 1), 0, 1); return V3.len(V3.sub(p, V3.add(sg.a, V3.sc(ab, t)))) - sg.r0; };
+  const azA = Math.atan2(dS[0], dS[2]);
+  let bestS = null, bestC = -1;
+  for (let da = -0.9; da <= 0.9; da += 0.15) for (let rr = 1.1; rr <= 1.7; rr += 0.15) {
+    const az = azA + da, pt = [bir[0] + Math.sin(az) * rr, 2.95, bir[2] + Math.cos(az) * rr];
+    let cl = 9; for (const sg of Yd.birch.segs) { cl = Math.min(cl, segD(pt, sg), segD(V3.add(pt, [0, 0.4, 0]), sg) + 0.1); }
+    const score = Math.min(cl, 0.6) - Math.abs(da) * 0.1;
+    if (score > bestC) { bestC = score; bestS = pt; }
+  }
+  Yd.suet = bestS;
+  Yd.suetHang = [bestS[0], 3.75, bestS[2]];
+  const dT = hdir(bir, bestS);
+  const sd = [dT[2], 0, -dT[0]];
+  Yd.perch.suet = [bestS[0] + dT[0] * 0.27 + sd[0] * 0.05, bestS[1] + 0.06, bestS[2] + dT[2] * 0.27 + sd[2] * 0.05];
+
+  // дом с большим стеклом: стена поставлена так, чтобы в стекле отражалась берёза,
+  // если смотреть от рябины
+  const B = [bir[0], 4.0, bir[2]];
+  const azB = Math.atan2(B[0] - V[0], B[2] - V[2]);
+  const azW = azB - 0.62;
+  const W = [V[0] + Math.sin(azW) * 25, 2.2, V[2] + Math.cos(azW) * 25];
+  const va = V3.norm(V3.sub(V, W)), vb = V3.norm(V3.sub(B, W));
+  const nn = V3.norm([va[0] + vb[0], 0, va[2] + vb[2]]);
+  const tg = [nn[2], 0, -nn[0]];
+  Yd.house = { W, n: nn, tg, ww: 5.2, wh: 3.0, w: 22, h: 12.4, d: 10 };
+  Yd.house.front = V3.add(W, V3.sc(tg, 4.5)); Yd.house.front[1] = 0;
+  const hw = Yd.house.ww / 2, hh = Yd.house.wh / 2;
+  Yd.house.glass = [V3.add(W, [tg[0] * -hw, -hh, tg[2] * -hw]), V3.add(W, [tg[0] * hw, -hh, tg[2] * hw]), V3.add(W, [tg[0] * hw, hh, tg[2] * hw]), V3.add(W, [tg[0] * -hw, hh, tg[2] * -hw])];
+
+  // город по кругу горизонта
+  Yd.city = [];
+  for (let a = -Math.PI; a < Math.PI; a += r.range(0.09, 0.2)) Yd.city.push({ az: a, d: r.range(60, 110), w: r.range(10, 26), h: r.range(9, 42), dp: r.range(10, 16) });
+  Yd.farTrees = [];
+  for (let k = 0; k < 22; k++) Yd.farTrees.push({ az: r() * 6.283, d: r.range(22, 42), h: r.range(6, 11), seed: r() * 1e6 | 0 });
+  Yd.lamps = [[-2.5, 0, 2.0], [7.5, 0, 12.5]];
+  Yd.car = { p: V3.add(Yd.house.front, V3.add(V3.sc(nn, 4.5), V3.sc(tg, -11))), yaw: Math.atan2(tg[0], tg[2]) };
+
+  Yd.hawkSide = r() < 0.5 ? -1 : 1;
+  // гусеница грызёт листья на веточке берёзы, на стороне, обращённой к ели
+  const toRoost = hdir(bir, Yd.perch.roost), la = Math.atan2(toRoost[0], toRoost[2]) + r.range(-0.5, 0.5);
+  const dl = [Math.sin(la), 0, Math.cos(la)];
+  const ly = r.range(2.3, 2.75), tr = lerp(0.2, 0.15, ly / 5.2);
+  Yd.larvaBase = [bir[0] + 0.04 + dl[0] * tr, ly - 0.05, bir[2] + dl[2] * tr];
+  Yd.larva = [bir[0] + 0.04 + dl[0] * (tr + 0.3), ly, bir[2] + dl[2] * (tr + 0.3)];
+  Yd.larvaDir = dl;
+  Yd.perch.larva = [bir[0] + dl[0] * 0.75, ly + 0.14, bir[2] + dl[2] * 0.75];
+  // слабый ветер несёт запах от берёзы через двор к ели
+  const wd = hdir(Yd.larva, Yd.perch.roost);
+  Yd.wind = [wd[0] * 0.55 + wd[2] * 0.08, 0.03, wd[2] * 0.55 - wd[0] * 0.08];
+  // сосед-синица прячется в кустах: его тревожный крик слышен издалека
+  const nb = [Yd.aronia, Yd.rosehip, Yd.rowan][Math.floor(r() * 3)];
+  Yd.neighbor = [nb.x + r.range(-0.3, 0.3), nb === Yd.rowan ? 3.4 : 1.1, nb.z + r.range(-0.3, 0.3)];
+  // точка удара о стекло и место падения
+  Yd.crash = V3.add(Yd.house.W, V3.sc(Yd.house.n, 0.3));
+  Yd.below = V3.add([Yd.house.W[0], 0.1, Yd.house.W[2]], V3.sc(Yd.house.n, 0.7));
+  return Yd;
+}
+function perch(k) { return Y.perch[k]; }
+
+/* =====================================================================
+   4. ГЕОМЕТРИЯ: низкополигональные модели двора
+   ===================================================================== */
+const SNOW = hex('#EEF0F5');
+const GRASS = hex('#6F9A45'), LEAF = [hex('#4E7F35'), hex('#5E8E3B'), hex('#6E9C44'), hex('#43702F')];
+class Geo {
+  constructor() { this.a = []; }
+  get count() { return this.a.length / 11; }
+  v(p, n, c, uv, k) { this.a.push(p[0], p[1], p[2], n[0], n[1], n[2], c[0], c[1], c[2], uv || 0, k || 0); }
+  tri(a, b, c, col, uv, k) { const n = V3.norm(V3.cross(V3.sub(b, a), V3.sub(c, a))); this.v(a, n, col, uv, k); this.v(b, n, col, uv, k); this.v(c, n, col, uv, k); }
+  triC(a, b, c, ca, cb, cc, uv, k) { const n = V3.norm(V3.cross(V3.sub(b, a), V3.sub(c, a))); this.v(a, n, ca, uv, k); this.v(b, n, cb, uv, k); this.v(c, n, cc, uv, k); }
+  quad(a, b, c, d, col, uv, k) { this.tri(a, b, c, col, uv, k); this.tri(a, c, d, col, uv, k); }
+  cyl(a, b, r0, r1, n, c0, c1, uv, snow) {
+    const d = V3.norm(V3.sub(b, a)), up = Math.abs(d[1]) > 0.9 ? [1, 0, 0] : [0, 1, 0];
+    const A = V3.norm(V3.cross(d, up)), B = V3.cross(d, A);
+    for (let i = 0; i < n; i++) {
+      const t0 = i / n * 6.2832, t1 = (i + 1) / n * 6.2832;
+      const n0 = V3.add(V3.sc(A, Math.cos(t0)), V3.sc(B, Math.sin(t0))), n1 = V3.add(V3.sc(A, Math.cos(t1)), V3.sc(B, Math.sin(t1)));
+      const s0 = snow ? Math.max(0, n0[1]) * snow : 0, s1 = snow ? Math.max(0, n1[1]) * snow : 0;
+      const c00 = mixc(c0, SNOW, s0), c01 = mixc(c0, SNOW, s1), c10 = mixc(c1, SNOW, s0), c11 = mixc(c1, SNOW, s1);
+      const p00 = V3.add(a, V3.sc(n0, r0)), p01 = V3.add(a, V3.sc(n1, r0)), p10 = V3.add(b, V3.sc(n0, r1)), p11 = V3.add(b, V3.sc(n1, r1));
+      this.v(p00, n0, c00, uv); this.v(p01, n1, c01, uv); this.v(p11, n1, c11, uv);
+      this.v(p00, n0, c00, uv); this.v(p11, n1, c11, uv); this.v(p10, n0, c10, uv);
+    }
+  }
+  sphere(c, r, col, uv, seg, ring, s, k) {
+    seg = seg || 7; ring = ring || 5; s = s || [1, 1, 1];
+    const P = (i, j) => { const th = i / ring * Math.PI, ph = j / seg * 6.2832; const n = [Math.sin(th) * Math.cos(ph), Math.cos(th), Math.sin(th) * Math.sin(ph)]; return { p: [c[0] + n[0] * r * s[0], c[1] + n[1] * r * s[1], c[2] + n[2] * r * s[2]], n }; };
+    for (let i = 0; i < ring; i++) for (let j = 0; j < seg; j++) {
+      const a = P(i, j), b = P(i + 1, j), d = P(i, j + 1), e = P(i + 1, j + 1);
+      const ca = Array.isArray(col[0]) ? col[i] : col;
+      this.v(a.p, a.n, ca, uv, k); this.v(b.p, b.n, ca, uv, k); this.v(e.p, e.n, ca, uv, k);
+      this.v(a.p, a.n, ca, uv, k); this.v(e.p, e.n, ca, uv, k); this.v(d.p, d.n, ca, uv, k);
+    }
+  }
+  // параллелепипед по центру, с осями u (ширина), n (глубина)
+  box(c, w, h, d, col, u, top) {
+    u = u || [1, 0, 0]; const n = [-u[2], 0, u[0]], y = [0, 1, 0];
+    const P = (a, b, e) => V3.add(c, V3.add(V3.sc(u, a * w / 2), V3.add(V3.sc(y, b * h / 2), V3.sc(n, e * d / 2))));
+    const f = [[P(-1, -1, 1), P(1, -1, 1), P(1, 1, 1), P(-1, 1, 1)], [P(1, -1, -1), P(-1, -1, -1), P(-1, 1, -1), P(1, 1, -1)],
+      [P(-1, -1, -1), P(-1, -1, 1), P(-1, 1, 1), P(-1, 1, -1)], [P(1, -1, 1), P(1, -1, -1), P(1, 1, -1), P(1, 1, 1)]];
+    f.forEach(q => this.quad(q[0], q[1], q[2], q[3], col));
+    this.quad(P(-1, 1, 1), P(1, 1, 1), P(1, 1, -1), P(-1, 1, -1), top || col);
+  }
+  // скруглённый «кусок»: суперэллипсоид в осях u (длина), y, w (ширина)
+  superq(c, a, b, cc, e, u, colFn, segU, segV, lump) {
+    segU = segU || 22; segV = segV || 14;
+    const w = [-u[2], 0, u[0]], sp = (x, p) => Math.sign(x) * Math.pow(Math.abs(x), p), G = [];
+    for (let i = 0; i <= segV; i++) { const v = -Math.PI / 2 + Math.PI * i / segV, row = [];
+      for (let j = 0; j <= segU; j++) { const t = -Math.PI + 2 * Math.PI * j / segU;
+        const k = 1 + (lump ? lump(i, j) : 0);
+        const lx = a * k * sp(Math.cos(v), e) * sp(Math.cos(t), e), ly = b * k * sp(Math.sin(v), e), lz = cc * k * sp(Math.cos(v), e) * sp(Math.sin(t), e);
+        row.push({ p: V3.add(c, V3.add(V3.sc(u, lx), V3.add([0, ly, 0], V3.sc(w, lz)))), l: [lx / a, ly / b, lz / cc] }); }
+      G.push(row); }
+    const N = (i, j) => { const a1 = G[Math.min(segV, i + 1)][j].p, a0 = G[Math.max(0, i - 1)][j].p, b1 = G[i][(j + 1) % segU].p, b0 = G[i][(j - 1 + segU) % segU].p;
+      const n = V3.norm(V3.cross(V3.sub(a1, a0), V3.sub(b1, b0))); const out = V3.sub(G[i][j].p, c); return V3.dot(n, out) < 0 ? V3.sc(n, -1) : n; };
+    for (let i = 0; i < segV; i++) for (let j = 0; j < segU; j++) {
+      const q = [[i, j], [i + 1, j], [i + 1, j + 1], [i, j + 1]].map(([a2, b2]) => ({ p: G[a2][b2].p, n: N(a2, b2 % segU), c: colFn(G[a2][b2].l) }));
+      this.v(q[0].p, q[0].n, q[0].c); this.v(q[1].p, q[1].n, q[1].c); this.v(q[2].p, q[2].n, q[2].c);
+      this.v(q[0].p, q[0].n, q[0].c); this.v(q[2].p, q[2].n, q[2].c); this.v(q[3].p, q[3].n, q[3].c);
+    }
+  }
+  disc(c, rx, rz, col, n) { n = n || 18; for (let i = 0; i < n; i++) { const a = i / n * 6.2832, b = (i + 1) / n * 6.2832; this.v(c, [0, 1, 0], col); this.v([c[0] + Math.cos(a) * rx, c[1], c[2] + Math.sin(a) * rz], [0, 1, 0], col); this.v([c[0] + Math.cos(b) * rx, c[1], c[2] + Math.sin(b) * rz], [0, 1, 0], col); } }
+}
+
+const SUN_DIR = V3.norm([-0.38, 0.3, -0.87]);   // летнее солнце
+function shadow(g, x, z, R) {
+  const sx = -SUN_DIR[0], sz = -SUN_DIR[2], l = Math.hypot(sx, sz);
+  g.disc([x + sx / l * R * 0.7, 0.012, z + sz / l * R * 0.7], R * 1.05, R * 1.05, hex('#4C6E30'), 20);
+}
+
+function buildTreeGeo(g, t, cfg, r) {
+  for (const s of t.segs) {
+    const n = s.depth >= 9 ? 8 : s.depth >= 3 ? 5 : 3;
+    const col = s.depth >= 9 ? cfg.trunk : s.depth >= 2 ? cfg.branch : cfg.twig;
+    if (cfg.birchTrunk && s.depth >= 9) {
+      const N = 22;
+      for (let k = 0; k < N; k++) {
+        const a = V3.lerp(s.a, s.b, k / N), b = V3.lerp(s.a, s.b, (k + 1) / N);
+        const c = r() < 0.2 ? hex('#3A3634') : r() < 0.3 ? hex('#D9D3C8') : cfg.trunk;
+        g.cyl(a, b, lerp(s.r0, s.r1, k / N), lerp(s.r0, s.r1, (k + 1) / N), 8, c, c, 0.12);
+      }
+      continue;
+    }
+    g.cyl(s.a, s.b, s.r0, s.r1, n, col, col, cfg.uv || 0, cfg.snow);
+  }
+  const twigs = [];
+  if (cfg.droop) for (const tp of t.tips) { const e = [tp[0] + r.range(-0.08, 0.08), tp[1] - r.range(0.35, 0.8), tp[2] + r.range(-0.08, 0.08)]; g.cyl(tp, e, 0.008, 0.005, 3, cfg.twig, cfg.twig); twigs.push({ a: tp, b: e }); }
+  if (cfg.leaf) {
+    for (const s of t.segs) if (s.depth <= 2) twigs.push(s);
+    const eyes = Object.values(Y.perch), food = Y.clusters.map(c => c.pos);
+    for (const s of twigs) {
+      const n = Math.max(3, Math.round(V3.len(V3.sub(s.b, s.a)) / cfg.leaf * 4.5));
+      for (let k = 0; k < n; k++) {
+        const c = V3.add(V3.lerp(s.a, s.b, r.range(0.1, 1.1)), [r.range(-1, 1) * cfg.leaf * 0.9, r.range(-0.6, 0.9) * cfg.leaf * 0.8, r.range(-1, 1) * cfg.leaf * 0.9]);
+        if (eyes.some(e => V3.len(V3.sub(e, c)) < 0.55) || food.some(f => V3.len(V3.sub(f, c)) < 0.2)) continue;
+        leaf(g, c, cfg.leaf * r.range(0.7, 1.2), r() * 6.283, r.range(-0.6, 0.3), mixc(LEAF[r() * 4 | 0], LEAF[r() * 4 | 0], r()), r);
+      }
+    }
+  }
+}
+// лист: ромбовидная пластинка, слегка выгнутая
+function leaf(g, c, L, az, tilt, col, r, bite) {
+  const d = V3.norm([Math.sin(az) * Math.cos(tilt), Math.sin(tilt), Math.cos(az) * Math.cos(tilt)]), w = V3.norm(V3.cross(d, [0, 1, 0]));
+  const T = V3.add(c, V3.sc(d, L)), A = V3.add(c, V3.add(V3.sc(d, L * 0.4), V3.add(V3.sc(w, L * 0.32), [0, L * 0.06, 0]))), B = V3.add(c, V3.add(V3.sc(d, L * 0.4), V3.add(V3.sc(w, -L * 0.32), [0, L * 0.06, 0])));
+  const lite = mixc(col, hex('#9CC26A'), 0.25);
+  if (bite) {
+    // погрызенный край: на месте одной стороны — зубчатая выемка
+    const m1 = V3.add(c, V3.add(V3.sc(d, L * 0.25), V3.sc(w, L * 0.1))), m2 = V3.add(c, V3.add(V3.sc(d, L * 0.55), V3.sc(w, L * 0.06))), m3 = V3.add(c, V3.add(V3.sc(d, L * 0.75), V3.sc(w, L * 0.14)));
+    g.triC(c, B, T, col, col, lite); g.triC(c, T, m3, col, lite, col); g.triC(c, m3, m2, col, col, col); g.triC(c, m2, m1, col, col, col);
+    return;
+  }
+  g.triC(c, A, T, col, col, lite); g.triC(c, T, B, col, lite, col);
+}
+
+function buildSpruce(g, sp, r) {
+  const x = sp.x, z = sp.z;
+  g.cyl([x, 0, z], [x, sp.h * 0.8, z], 0.22, 0.08, 7, hex('#4B3B32'), hex('#4B3B32'));
+  const tiers = 9, dark = hex('#28423A'), mid = hex('#355445'), under = hex('#1C2E28');
+  for (let k = 0; k < tiers; k++) {
+    const yb = 0.6 + k * (sp.h - 1.2) / tiers, th = 2.0 - k * 0.1, R = spruceR(sp, yb);
+    const N = 16, apex = [x, yb + th, z];
+    const rim = [];
+    for (let i = 0; i < N; i++) { const a = i / N * 6.2832 + k * 0.4, rr = R * (i % 2 ? 0.78 : 1) * r.range(0.92, 1.06); rim.push([x + Math.cos(a) * rr, yb - (i % 2 ? 0.05 : 0.22), z + Math.sin(a) * rr]); }
+    for (let i = 0; i < N; i++) {
+      const a = rim[i], b = rim[(i + 1) % N];
+      const sa = r() < 0.35 ? 0.55 : 0.12, sb = r() < 0.35 ? 0.55 : 0.12;
+      g.triC(apex, a, b, mixc(mid, hex('#7FA65A'), 0.3), mixc(dark, hex('#6E9A4E'), sa * 0.5), mixc(dark, hex('#6E9A4E'), sb * 0.5));
+      g.tri(a, b, [x, yb + 0.15, z], under);
+    }
+  }
+}
+function spruceR(sp, y) { return Math.max(0.25, sp.rad * Math.pow(clamp(1 - (y - 0.6) / (sp.h - 0.6), 0, 1), 0.85) + 0.15); }
+
+function buildBerries(g, c) {
+  const col = c.kind === 'rowan' ? (c.q > 0.6 ? hex('#E2552B') : hex('#7A4632')) : c.kind === 'aronia' ? hex('#2B2334') : hex('#C93A2B');
+  const uv = c.kind === 'rowan' ? (c.q > 0.6 ? 0.95 : 0.62) : c.kind === 'aronia' ? 0.8 : 0;
+  for (const b of c.berries) g.sphere(V3.add(c.pos, b.o), b.r, col, uv, 6, 4);
+  if (c.kind !== 'rosehip') g.cyl(V3.add(c.pos, [0, 0.1, 0]), c.pos, 0.006, 0.004, 3, hex('#5E4E44'), hex('#5E4E44'));
+}
+
+function buildFeeder(g, f) {
+  const x = f.x, z = f.z, y = f.y, u = [Y.feederFace[2], 0, -Y.feederFace[0]];
+  const wood = hex('#8A7157'), dark = hex('#5F4D3D');
+  g.cyl([x, 0, z], [x, y, z], 0.035, 0.03, 6, dark, dark);
+  g.box([x, y, z], 0.6, 0.035, 0.6, wood, u);
+  const n = [-u[2], 0, u[0]];
+  [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(([a, b]) => { const c = V3.add([x, y + 0.035, z], V3.add(V3.sc(u, a * 0.29), V3.sc(n, b * 0.29))); g.box(c, a ? 0.025 : 0.6, 0.04, b ? 0.025 : 0.6, dark, u); });
+  [[1, 1], [1, -1], [-1, 1], [-1, -1]].forEach(([a, b]) => { const c = V3.add([x, y, z], V3.add(V3.sc(u, a * 0.27), V3.sc(n, b * 0.27))); g.cyl(c, V3.add(c, [0, 0.42, 0]), 0.012, 0.012, 4, dark, dark); });
+  // крыша
+  const yr = y + 0.42, P = (a, b, h) => V3.add([x, yr + h, z], V3.add(V3.sc(u, a), V3.sc(n, b)));
+  g.quad(P(-0.42, -0.42, 0), P(0.42, -0.42, 0), P(0.42, 0, 0.2), P(-0.42, 0, 0.2), hex('#8A6A4C'));
+  g.quad(P(-0.42, 0.42, 0), P(0.42, 0.42, 0), P(0.42, 0, 0.2), P(-0.42, 0, 0.2), hex('#7A5D42'));
+  g.quad(P(-0.42, -0.42, -0.02), P(0.42, -0.42, -0.02), P(0.42, 0, 0.18), P(-0.42, 0, 0.18), hex('#56636E'));
+  g.quad(P(-0.42, 0.42, -0.02), P(0.42, 0.42, -0.02), P(0.42, 0, 0.18), P(-0.42, 0, 0.18), hex('#56636E'));
+  // семечки
+  const r = makeRng(77);
+  for (let k = 0; k < 70; k++) { const c = [x + r.range(-0.2, 0.2), y + 0.022, z + r.range(-0.2, 0.2)]; g.box(c, 0.013, 0.005, 0.007, k % 3 ? hex('#2F2925') : hex('#7A6E62'), V3.norm([r() - 0.5, 0, r() - 0.5])); }
+}
+
+function buildHouse(g, H, r) {
+  const { tg, n } = H, F = H.front, W2 = H.w / 2;
+  const wall = hex('#E0D8C8'), side = hex('#D2C9B8'), win = hex('#556074'), frame = hex('#3E3A38');
+  const P = (u, v, e) => [F[0] + tg[0] * u - n[0] * (e || 0), v, F[2] + tg[2] * u - n[2] * (e || 0)];
+  const wq = (u0, u1, v0, v1, col) => g.quad(P(u0, v0), P(u1, v0), P(u1, v1), P(u0, v1), col);
+  const uw = -4.5, hw = H.ww / 2, v0 = H.W[1] - H.wh / 2, v1 = H.W[1] + H.wh / 2;
+  wq(-W2, uw - hw, 0, H.h, wall); wq(uw + hw, W2, 0, H.h, wall); wq(uw - hw, uw + hw, 0, v0, wall); wq(uw - hw, uw + hw, v1, H.h, wall);
+  // боковые стены, задняя, крыша
+  g.quad(P(-W2, 0), P(-W2, 0, H.d), P(-W2, H.h, H.d), P(-W2, H.h), side);
+  g.quad(P(W2, 0), P(W2, 0, H.d), P(W2, H.h, H.d), P(W2, H.h), side);
+  g.quad(P(-W2, 0, H.d), P(W2, 0, H.d), P(W2, H.h, H.d), P(-W2, H.h, H.d), side);
+  g.quad(P(-W2 - 0.3, H.h + 0.05, -0.3), P(W2 + 0.3, H.h + 0.05, -0.3), P(W2 + 0.3, H.h + 0.05, H.d + 0.3), P(-W2 - 0.3, H.h + 0.05, H.d + 0.3), hex('#7E838C'));
+  // окна этажей (тёмное стекло без отражения) и межэтажные полосы
+  const off = 0.035, Q = (u0, u1, a, b, col) => g.quad(P(u0, a, -off), P(u1, a, -off), P(u1, b, -off), P(u0, b, -off), col);
+  for (let f = 0; f < 3; f++) {
+    const vb = 4.6 + f * 2.75;
+    Q(-W2, W2, vb - 0.55, vb - 0.47, hex('#C9B99B'));
+    for (let u = -W2 + 1.6; u < W2 - 1; u += 2.6) { Q(u - 0.62, u + 0.62, vb, vb + 1.45, frame); g.quad(P(u - 0.55, vb + 0.06, -off - 0.02), P(u + 0.55, vb + 0.06, -off - 0.02), P(u + 0.55, vb + 1.39, -off - 0.02), P(u - 0.55, vb + 1.39, -off - 0.02), r() < 0.12 ? hex('#7C7466') : win); }
+  }
+  // первый этаж: дверь и рама большого стекла
+  Q(2.6, 3.9, 0, 2.3, hex('#5A4E44'));
+  Q(4.6, 5.8, 0.9, 2.2, win);
+  const fr = 0.07;
+  Q(uw - hw - fr, uw + hw + fr, v0 - fr, v0, frame); Q(uw - hw - fr, uw + hw + fr, v1, v1 + fr, frame);
+  Q(uw - hw - fr, uw - hw, v0, v1, frame); Q(uw + hw, uw + hw + fr, v0, v1, frame);
+  Q(uw - hw - 0.3, uw + hw + 0.3, v0 - 0.18, v0 - fr, hex('#BDAF95'));
+}
+
+function buildCity(g, r) {
+  for (const b of Y.city) {
+    const c = [Math.sin(b.az) * b.d, b.h / 2, Math.cos(b.az) * b.d], u = [Math.cos(b.az), 0, -Math.sin(b.az)];
+    const col = mixc(hex('#AEB2C2'), hex('#C9C2C6'), r());
+    g.box(c, b.w, b.h, b.dp, col, u, hex('#8F949E'));
+    const n = [-u[2], 0, u[0]];
+    for (let y = 2.5; y < b.h - 1.5; y += 2.8) g.quad(...[[-1, y], [1, y], [1, y + 0.9], [-1, y + 0.9]].map(([a, yy]) => V3.add([c[0], yy, c[2]], V3.add(V3.sc(u, a * (b.w / 2 - 1)), V3.sc(n, -b.dp / 2 - 0.05)))), mixc(col, hex('#7F8598'), 0.5));
+  }
+  for (const t of Y.farTrees) {
+    const x = Math.sin(t.az) * t.d, z = Math.cos(t.az) * t.d;
+    if (nearHouse(x, z, 3) || Math.hypot(x, z) < 20) continue;
+    const rr = makeRng(t.seed), tr = { segs: [], tips: [] };
+    tr.segs.push({ a: [x, 0, z], b: [x, t.h * 0.4, z], r0: 0.18, r1: 0.12, depth: 9 });
+    grow3(rr, [x, t.h * 0.4, z], [0, 1, 0], t.h * 0.22, 0.1, 3, tr.segs, tr.tips, 0.55, 0.12);
+    buildTreeGeo(g, tr, { trunk: hex('#6B625C'), branch: hex('#6B625C'), twig: hex('#7D7470') }, rr);
+    for (const tp of tr.tips) if (rr() < 0.7) g.sphere(tp, rr.range(0.9, 1.5), mixc(LEAF[rr() * 4 | 0], hex('#7C9A6A'), 0.25), 0, 6, 4, [1, 0.75, 1]);
+  }
+}
+function nearHouse(x, z, m) {
+  const H = Y.house, d = [x - H.front[0], 0, z - H.front[2]];
+  const u = V3.dot(d, H.tg), e = -V3.dot(d, H.n);
+  return Math.abs(u) < H.w / 2 + m && e > -m && e < H.d + m;
+}
+
+function buildWorld() {
+  const r = makeRng(currentSeed * 31 + 7);
+  const g = new Geo();
+  // трава: кольца с лёгкими неровностями оттенка
+  const radii = [0, 3, 7, 12, 18, 26, 38, 55, 80, 120, 220], N = 48;
+  const shade = (a, i) => mixc(mixc(GRASS, hex('#86A456'), i / 10), hex('#5A8638'), (Math.sin(a * 7 + i * 3.1) * 0.5 + 0.5) * 0.6 * (i < 8 ? 1 : 0.3));
+  for (let i = 0; i < radii.length - 1; i++) for (let j = 0; j < N; j++) {
+    const a0 = j / N * 6.2832, a1 = (j + 1) / N * 6.2832, r0 = radii[i], r1 = radii[i + 1];
+    const p = (rr, a) => [Math.sin(a) * rr, 0, Math.cos(a) * rr];
+    g.triC(p(r0, a0), p(r1, a0), p(r1, a1), shade(a0, i), shade(a0, i + 1), shade(a1, i + 1));
+    g.triC(p(r0, a0), p(r1, a1), p(r0, a1), shade(a0, i), shade(a1, i + 1), shade(a1, i));
+  }
+  // тропинка к подъезду
+  const H = Y.house, door = V3.add(H.front, V3.sc(H.tg, 3.7));
+  const path = [[-12, 0.01, -6], [-3, 0.01, 1], [3, 0.01, 6.5], [door[0] + H.n[0] * 1.5, 0.01, door[2] + H.n[2] * 1.5]];
+  for (let k = 0; k < path.length - 1; k++) { const a = path[k], b = path[k + 1], d = hdir(a, b), s = [-d[2] * 0.7, 0, d[0] * 0.7]; g.quad(V3.add(a, s), V3.sub(a, s), V3.sub(b, s), V3.add(b, s), hex('#A89C88')); }
+  // тени
+  shadow(g, Y.spruce.x, Y.spruce.z, 3.0); shadow(g, Y.rowan.x, Y.rowan.z, 1.8); shadow(g, Y.birch.x, Y.birch.z, 2.2);
+  shadow(g, Y.feeder.x, Y.feeder.z, 0.45); shadow(g, Y.aronia.x, Y.aronia.z, 0.8); shadow(g, Y.rosehip.x, Y.rosehip.z, 0.8);
+  const spruce = new Geo(); buildSpruce(spruce, Y.spruce, r);
+  buildTreeGeo(g, Y.rowan, { trunk: hex('#5D4F47'), branch: hex('#66564C'), twig: hex('#76655A'), leaf: 0.16 }, r);
+  buildTreeGeo(g, Y.birch, { trunk: hex('#ECE8DF'), branch: hex('#BDB3A8'), twig: hex('#5E4E4A'), leaf: 0.2, birchTrunk: true, droop: true }, r);
+  buildTreeGeo(g, Y.aronia, { trunk: hex('#4B3B3B'), branch: hex('#4B3B3B'), twig: hex('#5A4848'), leaf: 0.1 }, r);
+  buildTreeGeo(g, Y.rosehip, { trunk: hex('#7A5040'), branch: hex('#7A5040'), twig: hex('#8A5D4A'), leaf: 0.08 }, r);
+  for (const c of Y.clusters) buildBerries(g, c);
+  buildFeeder(g, Y.feeder);
+  // веточка берёзы с погрызенными листьями, на одном из них — гусеница
+  { const L = Y.larva, d = Y.larvaDir, base = Y.larvaBase, tw = hex('#5E4E4A');
+    g.cyl(base, V3.add(L, [0, -0.012, 0]), 0.012, 0.005, 4, tw, tw);
+    const lr = makeRng(91), az0 = Math.atan2(d[0], d[2]);
+    leaf(g, V3.add(L, [-d[0] * 0.03, -0.01, -d[2] * 0.03]), 0.12, az0, -0.05, hex('#5E8E3B'), lr);
+    [[0.9, 0.11, true], [-0.8, 0.1, true], [2.2, 0.09, false], [-2.0, 0.1, true], [0.3, 0.08, true], [3.0, 0.1, false]].forEach(([da, sz, bt], k) => {
+      const c = V3.lerp(base, L, 0.35 + k * 0.1); leaf(g, V3.add(c, [0, -0.01 - k * 0.006, 0]), sz, az0 + da, -0.25, LEAF[k % 4], lr, bt); });
+  }
+  // ветки под присадами
+  const brn = (from, p, col) => { const end = V3.add(p, V3.sc(hdir(from, p), -0.04)); g.cyl([from[0], p[1] - 0.2, from[2]], [end[0], p[1] - 0.1, end[2]], 0.035, 0.016, 6, col, col); };
+  brn([Y.spruce.x, 0, Y.spruce.z], Y.perch.roost, hex('#4B3B32'));
+  brn([Y.rowan.x, 0, Y.rowan.z], Y.perch.rowan, hex('#66564C'));
+  brn([Y.birch.x, 0, Y.birch.z], Y.perch.birch, hex('#BDB3A8'));
+  brn([Y.aronia.x, 0, Y.aronia.z], Y.perch.aronia, hex('#4B3B3B'));
+  // фонари, машина
+  for (const l of Y.lamps) { g.cyl(l, [l[0], 4.4, l[2]], 0.07, 0.05, 6, hex('#4F5560'), hex('#4F5560')); g.box([l[0] + 0.3, 4.45, l[2]], 0.7, 0.12, 0.2, hex('#4F5560')); }
+  buildCity(g, r);
+  const house = new Geo(); buildHouse(house, Y.house, r);
+  const glass = new Geo(); const gq = Y.house.glass; glass.quad(gq[0], gq[1], gq[2], gq[3], [1, 1, 1], 0, 2);
+  return { world: g, house, glass, spruce };
+}
+
+function buildSky() { const g = new Geo(); g.sphere([0, 0, 0], 600, [1, 1, 1], 0, 24, 12, [1, 1, 1], 1); return g; }
+function buildBeak() {
+  const g = new Geo(), T = [0, -0.03, -0.095], L = [-0.024, -0.058, -0.03], R = [0.024, -0.058, -0.03], U = [0, -0.04, -0.028], D = [0, -0.07, -0.035];
+  g.tri(T, L, U, hex('#4D433D'), 0, 2); g.tri(T, U, R, hex('#2D2724'), 0, 2); g.tri(T, L, D, hex('#26201E'), 0, 2); g.tri(T, D, R, hex('#1D1918'), 0, 2);
+  g.tri(T, [0, -0.052, -0.075], U, hex('#6A5D55'), 0, 2);
+  return g;
+}
+function buildHawk() {
+  const body = new Geo(), wing = new Geo(), top = hex('#5A534C'), light = hex('#9C9286');
+  body.sphere([0, 0, 0], 1, [top, top, light, light, light], 0, 8, 5, [0.11, 0.1, 0.3]);
+  body.sphere([0, 0.03, 0.29], 0.08, top, 0, 7, 5);
+  body.tri([0, 0.02, 0.36], [-0.02, 0.03, 0.33], [0.02, 0.03, 0.33], hex('#3A3430'));
+  body.quad([-0.05, 0, -0.26], [0.05, 0, -0.26], [0.1, -0.01, -0.62], [-0.1, -0.01, -0.62], hex('#625A52'));
+  const s1 = [0.05, 0, 0.12], s2 = [0.05, 0, -0.14], m1 = [0.42, 0.02, 0.1], m2 = [0.4, 0.02, -0.2], t = [0.8, 0, -0.1];
+  wing.tri(s1, m1, m2, top); wing.tri(s1, m2, s2, top); wing.tri(m1, t, m2, hex('#4E4842'));
+  return { body, wing };
+}
+function buildLarva() {
+  const g = new Geo(), c1 = hex('#8C9A3E'), c2 = hex('#6E7A2E');
+  for (let k = 0; k < 8; k++) g.sphere([0, 0, -k * 0.009], 0.0068 - k * 0.0002, k % 2 ? c1 : c2, 0, 7, 5);
+  g.sphere([0, 0.001, 0.008], 0.0062, hex('#4B3A26'), 0, 7, 5);
+  return g;
+}
+function buildCat() {
+  const body = new Geo(), tail = new Geo(), c = hex('#4A484E'), d = hex('#3A383E');
+  body.sphere([0, 0.13, 0], 1, c, 0, 9, 6, [0.13, 0.11, 0.27]);
+  body.sphere([0, 0.19, 0.28], 0.085, c, 0, 8, 6);
+  body.tri([-0.06, 0.25, 0.28], [-0.02, 0.27, 0.29], [-0.05, 0.33, 0.27], d);
+  body.tri([0.06, 0.25, 0.28], [0.02, 0.27, 0.29], [0.05, 0.33, 0.27], d);
+  body.sphere([-0.032, 0.2, 0.355], 0.012, hex('#D8C25E'), 0, 5, 3, null, 2);
+  body.sphere([0.032, 0.2, 0.355], 0.012, hex('#D8C25E'), 0, 5, 3, null, 2);
+  [[0, 0, 0], [0.02, 0.01, -0.16], [0.07, 0.02, -0.3], [0.15, 0.04, -0.38]].reduce((a, b) => { tail.cyl(a, b, 0.024, 0.02, 5, c, c); return b; });
+  return { body, tail };
+}
+
+/* =====================================================================
+   5. ДЕНЬ ПТИЦЫ: управление взглядом и полётом, корм, ошибки, события
+   ===================================================================== */
+const cam = { p: [0, 3, 0], yaw: 0, pitch: 0, roll: 0 };
+function pct(v) { return Math.round(clamp(v, 0, 1) * 100) + ' %'; }
+function deficit() { return clamp((CFG.energy.need - S.E) / CFG.energy.need, 0, 1); }
+
+/* ---------- цели: куда можно лететь ---------- */
+function buildTargets() {
+  const T = [];
+  const toCam = p => V3.norm(V3.sub(perch('roost'), p));
+  for (const c of Y.clusters) {
+    if (c.kind === 'rosehip') continue;
+    const away = c.kind === 'rowan' ? V3.norm(V3.sub(perch('rowan'), c.pos)) : V3.norm(V3.sub(perch('aronia'), c.pos));
+    const fp = V3.add(c.pos, V3.add(V3.sc(away, 0.28), [0, 0.06, 0]));
+    // питательность: самая вкусная кисть — 15, обычная — 10, подпорченная — 5
+    const gain = (c === Y.best || c === Y.aroBest) ? 0.15 : c.q < 0.6 ? 0.05 : 0.10;
+    T.push({ id: 'c' + c.id, kind: 'berries', c, pos: c.pos, at: fp, look: c.pos, gain, dur: 3.2, stock: 1 });
+  }
+  T.push({ id: 'feeder', kind: 'feeder', pos: [Y.feeder.x, Y.feeder.y + 0.1, Y.feeder.z], at: perch('feeder'), look: V3.add([Y.feeder.x, Y.feeder.y - 0.05, Y.feeder.z], V3.sc(Y.feederFace, 0.6)), gain: 0.12, dur: 5, stock: 1, open: true });
+  T.push({ id: 'larva', kind: 'larva', pos: Y.larva, at: perch('larva'), look: Y.larva, gain: 0.12, dur: 2.8, stock: 1 });
+  T.push({ id: 'bark', kind: 'bark', pos: [Y.birch.x, 3.4, Y.birch.z], at: perch('birch'), look: Y.bark, gain: 0.02, dur: 2.2, stock: 1 });
+  T.push({ id: 'window', kind: 'window', pos: Y.house.W, at: Y.crash, look: Y.house.W });
+  T.push({ id: 'roost', kind: 'roost', pos: [Y.spruce.x, 4, Y.spruce.z], at: perch('roost'), look: [2, 1.5, 7] });
+  T.push({ id: 'rowanP', kind: 'rest', pos: perch('rowan'), at: perch('rowan'), look: Y.best.pos });
+  T.push({ id: 'aroniaP', kind: 'rest', pos: perch('aronia'), at: perch('aronia'), look: Y.aroBest.pos });
+  void toCam;
+  return T;
+}
+function target(id) { return S.targets.find(t => t.id === id); }
+
+/* ---------- сообщения для человека ---------- */
+function say(text, kind, dur) { S.msg = { text, kind: kind || '', t: 0, dur: dur || 5 }; announce(text); }
+function note(list, text) { if (!list.includes(text)) list.push(text); }
+
+/* ---------- полёт ---------- */
+function flyTo(tg, opts) {
+  opts = opts || {};
+  const a = cam.p.slice(), b = tg.at.slice(), d = V3.len(V3.sub(b, a));
+  const up = opts.hop || d < 0.8 ? 0.12 : 0.5 + d * 0.12;
+  const c = V3.add(V3.lerp(a, b, 0.5), [0, up, 0]);
+  let dur = d < 0.8 ? 0.6 : clamp(0.8 + d * 0.1, 1.0, 2.6);
+  if (opts.fast) dur *= 0.65;
+  S.fly = { a, b, c, dur, t: 0, tg, forced: !!opts.forced };
+  S.mode = 'fly'; S.feed = null; S.perchKey = null;
+}
+function arrive(tg) {
+  S.fly = null; cam.p = tg.at.slice(); S.here = tg;
+  const look = tg.look;
+  S.yawBase = Math.atan2(look[0] - cam.p[0], look[2] - cam.p[2]);
+  S.pitchBase = clamp(Math.atan2(look[1] - cam.p[1], Math.hypot(look[0] - cam.p[0], look[2] - cam.p[2])), -0.9, 0.5);
+  S.perchKey = tg.id;
+  switch (tg.kind) {
+    case 'window': crash(); return;
+    case 'roost':
+      S.mode = 'perch';
+      if (S.E >= CFG.energy.need && S.dayT > 0.55) { say('Птица устроилась в ели на ночлег: запаса хватает.', 'good'); S.sleep = true; }
+      else if (S.hawk.active) say('Птица укрылась в густой хвое.', 'good');
+      return;
+    case 'rest': S.mode = 'perch'; return;
+    default:
+      if (tg.stock <= 0.02) { S.mode = 'perch'; say(tg.kind === 'berries' ? 'Эта кисть уже пустая.' : 'Здесь корм закончился.'); return; }
+      S.mode = 'feed'; S.feed = { tg, t: 0 };
+      if (tg.kind === 'berries' && tg.c.q < 0.6) { say('Ягоды подпорчены: питательность 5. Интерфейс показывал эту кисть тусклой.', 'ev'); note(S.mistakes, 'клевала подмёрзшие ягоды'); }
+      else if (tg.kind === 'berries' && tg.c !== Y.best && tg.c !== Y.aroBest) say('Обычная кисть: питательность 10. Самая вкусная, в кольце, дала бы 15.');
+      else if (tg.kind === 'berries' && tg.c === Y.best) { say('Самая вкусная кисть: питательность 15.', 'good'); note(S.wins, 'выбрала самую свежую кисть рябины'); }
+      else if (tg.kind === 'berries' && tg.c === Y.aroBest) { say('Самая питательная черноплодка: питательность 15.', 'good'); note(S.wins, 'нашла самую питательную черноплодку'); }
+      if (tg.kind === 'larva') { say('По запаху погрызенных листьев птица нашла гусеницу!', 'good'); note(S.wins, 'нашла гусеницу по запаху'); }
+  }
+}
+function crash() {
+  S.mode = 'stunned'; S.stun = 0; S.flash = { col: '255,255,255', t: 0, dur: 0.7 }; S.shake = 0.6;
+  S.E = Math.max(0, S.E - 0.05);
+  say('Удар о стекло! В нём отражался двор, и птица приняла его за проход. Интерфейс штриховал это стекло.', 'ev', 6);
+  note(S.mistakes, 'ударилась о стекло');
+  S.fall = { a: cam.p.slice(), b: Y.below.slice(), t: 0 };
+}
+
+/* ---------- события ---------- */
+function spawnHawk() {
+  const P = cam.p, back = S.yaw0 = cam.yaw + Math.PI + Y.hawkSide * 0.5;
+  const start = [P[0] + Math.sin(back) * 46, 13, P[2] + Math.cos(back) * 46];
+  const mid = V3.add(P, [0, 0.5, 0]);
+  const b = cam.yaw + Y.hawkSide * 1.2;
+  const end = [P[0] + Math.sin(b) * 34, 10, P[2] + Math.cos(b) * 34];
+  S.hawk = { active: true, t: 0, T: 12.4, start, mid, end, c1: V3.add(V3.lerp(start, mid, 0.55), [0, 3.5, 0]), c2: V3.add(mid, [Math.sin(b) * 8, 0.4, Math.cos(b) * 8]), p: start.slice(), v: [0, 0, 1], flap: 0, struck: false, warned: false };
+  S.hawkDone = true;
+}
+function hawkPos(H, t) {
+  const s = Math.pow(clamp(t / H.T, 0, 1), 1.84);
+  return s < 0.5 ? V3.bez(H.start, H.c1, H.mid, s * 2) : V3.bez(H.mid, H.c2, H.end, (s - 0.5) * 2);
+}
+function inSpruce() { const sp = Y.spruce, d = Math.hypot(cam.p[0] - sp.x, cam.p[2] - sp.z); return cam.p[1] > 0.4 && cam.p[1] < sp.h && d < spruceR(sp, cam.p[1]) + 0.35; }
+function threatOn() { const H = S.hawk, K = S.cat.stalk; return (H.active && H.warned && !H.struck && !hidden()) || (K && K.warned && !K.struck && !hidden() && !(cam.p[1] > 2.4 && !S.fly)); }
+function hidden() { return S.perchKey === 'roost' || inSpruce() || (S.fly && S.fly.tg.id === 'roost' && S.fly.t / S.fly.dur > 0.55); }
+function updateHawk(dt) {
+  const H = S.hawk; if (!H.active) return;
+  H.t += dt; const p = hawkPos(H, H.t), q = hawkPos(H, H.t + 0.05);
+  H.v = V3.norm(V3.sub(q, p)); H.p = p; H.flap += dt * (H.v[1] > 0 ? 13 : 4);
+  if (!H.warned && H.t > 0.7) { H.warned = true; alarmCall(); say('Тревожный крик соседа! Сзади заходит ястреб. Ель горит зелёным, к ней бегут огоньки — скорее туда.', 'ev', 6); }
+  if (!H.struck && H.t > H.T * 0.686) {
+    H.struck = true;
+    if (hidden()) { say('Ястреб промахнулся: птица успела в ель.', 'good'); note(S.wins, 'успела укрыться от ястреба'); }
+    else {
+      S.flash = { col: '232,35,27', t: 0, dur: 0.8 }; S.E = Math.max(0, S.E - 0.08);
+      say('Ястреб сбил птицу! Она упала в траву и потеряла силы.', 'ev', 6);
+      note(S.mistakes, 'не успела спрятаться от ястреба'); knockDown();
+    }
+  }
+  if (H.t > H.T) H.active = false;
+}
+function updateCat(dt) {
+  const C = S.cat, K = C.stalk;
+  C.y = 0;
+  if (K) {
+    K.t += dt;
+    const d = Math.hypot(K.to[0] - C.p[0], K.to[2] - C.p[2]);
+    if (K.t < K.T) {
+      // крадётся шагом, пригнувшись, и замирает у куста
+      if (d > 0.9) { const dir = hdir(C.p, K.to); C.p = V3.add(C.p, V3.sc(dir, Math.min(d - 0.9, 0.75 * dt))); C.walk = (C.walk || 0) + dt; }
+    } else {
+      // прыжок
+      K.jump = Math.min(1, K.jump + dt / 0.45);
+      const from = K.jumpFrom || (K.jumpFrom = C.p.slice());
+      C.p = V3.lerp(from, K.to, K.jump); C.y = Math.sin(K.jump * Math.PI) * 0.9;
+    }
+    if (!K.warned && K.t > 0.6) { K.warned = true; mobCall(); say('Тревожный крик соседа! Из-под куста к птице крадётся кошка. Скорее в ель — она горит зелёным.', 'ev', 6); }
+    if (!K.struck && K.t > K.T + 0.4) {
+      K.struck = true;
+      if (catSafe()) { say('Кошка прыгнула впустую: птица успела уйти.', 'good'); note(S.wins, 'вовремя ушла от кошки'); }
+      else catPounce();
+    }
+    if (K.t > K.T + 2.5) { C.stalk = null; C.back = 0; }
+  } else if (C.back != null) {
+    C.back += dt; const home = [Y.cat.x, 0, Y.cat.z], d = Math.hypot(home[0] - C.p[0], home[2] - C.p[2]);
+    if (d > 0.05) { C.p = V3.add(C.p, V3.sc(hdir(C.p, home), Math.min(d, 0.6 * dt))); C.walk = (C.walk || 0) + dt; } else C.back = null;
+  }
+  if (C.flick > 0) { C.flick += dt; if (C.flick > 1.8) C.flick = 0; }
+  else if (Math.random() < dt * 0.12) C.flick = 0.001;
+}
+// кошка — хищник на земле: подкрадывается из-под куста, когда птица кормится на низкой черноплодке
+function spawnCat(target) {
+  const C = S.cat; if (C.stalk) return;
+  const to = [target[0], 0, target[2]];
+  C.stalk = { t: 0, T: 7, from: C.p.slice(), to, warned: false, struck: false, jump: 0 };
+}
+function catThreatPos() { return [S.cat.p[0], 0.25, S.cat.p[2]]; }
+function catSafe() { const d = Math.hypot(cam.p[0] - S.cat.p[0], cam.p[2] - S.cat.p[2]); return hidden() || cam.p[1] > 2.4 || d > 3; }
+// удар хищника: птица сбита и падает в траву, потом приходит в себя
+function knockDown() {
+  S.fly = null; S.feed = null; S.peck = 0; S.here = null; S.perchKey = null;
+  S.mode = 'stunned'; S.stun = 0; S.shake = 0.8;
+  const d = [Math.sin(cam.yaw + 2.4), 0, Math.cos(cam.yaw + 2.4)];
+  S.fall = { a: cam.p.slice(), b: [cam.p[0] + d[0] * 1.6, 0.1, cam.p[2] + d[2] * 1.6], t: 0 };
+}
+function catPounce() {
+  S.cat.seen = true; S.flash = { col: '232,35,27', t: 0, dur: 0.7 }; S.E = Math.max(0, S.E - 0.04);
+  say('Кошка прыгнула! Птица вырвалась, упала в траву и потеряла силы.', 'ev', 6);
+  note(S.mistakes, 'не ушла от кошки');
+  knockDown();
+}
+
+/* ---------- запах и звук ---------- */
+function updateSmell(dt) {
+  return; // запах теперь строится каждый кадр в drawSmell
+  if (S.larvaEaten) { S.smell = S.smell.filter(p => (p.life += dt) < p.max); for (const p of S.smell) p.p = V3.add(p.p, V3.sc(p.v, dt)); return; }
+  S.smellAcc += dt;
+  while (S.smellAcc > 0.09) {
+    S.smellAcc -= 0.09;
+    S.smell.push({ p: V3.add(Y.larva, [rngSim.range(-0.05, 0.05), rngSim.range(-0.05, 0.05), rngSim.range(-0.05, 0.05)]), v: V3.add(V3.sc(hdir(Y.larva, V3.add(cam.p, [-hdir(Y.larva, cam.p)[2] * 2.2, 0, hdir(Y.larva, cam.p)[0] * 2.2])), 0.55), [rngSim.gauss() * 0.025, 0.02 + rngSim.gauss() * 0.012, rngSim.gauss() * 0.025]), life: 0, max: rngSim.range(22, 28), s: rngSim.range(0.07, 0.14), ph: rngSim() * 6 });
+  }
+  const t = S.t;
+  for (const p of S.smell) {
+    p.life += dt;
+    const sw = [Math.sin(t * 0.5 + p.life * 0.4) * 0.12, 0, Math.cos(t * 0.4 + p.life * 0.35) * 0.12];
+    p.p = V3.add(p.p, V3.sc(V3.add(p.v, sw), dt));
+    // запах сносит к птице: туда, где она сейчас
+    // цель — место чуть сбоку от птицы: струйка проходит рядом с ней, и её видно сбоку, а не «в лоб»
+    const dl = hdir(Y.larva, cam.p), aim = V3.add(cam.p, [-dl[2] * 2.2, -0.4, dl[0] * 2.2]);
+    const toBird = V3.sub(aim, p.p), db = V3.len(V3.sub(cam.p, p.p));
+    p.v = V3.add(V3.sc(p.v, 1 - dt * 0.6), V3.sc(V3.norm([toBird[0], toBird[1] * 0.3, toBird[2]]), 0.55 * dt * 0.6));
+    p.v = V3.add(p.v, [rngSim.gauss() * 0.006 * dt, 0, rngSim.gauss() * 0.006 * dt]);
+    if (db < 1.6 || V3.len(toBird) < 0.8) p.life = Math.max(p.life, p.max - 0.6);
+  }
+  S.smell = S.smell.filter(p => p.life < p.max);
+}
+function alarmCall() { S.sounds.push({ p: Y.neighbor.slice(), t: 0, dur: 2.6, kind: 'alarm' }); sound('seet'); }
+function mobCall() { S.sounds.push({ p: Y.neighbor.slice(), t: 0, dur: 2.6, kind: 'alarm' }); sound('mob'); }
+function contactCall() { S.sounds.push({ p: Y.neighbor.slice(), t: 0, dur: 1.6, kind: 'contact' }); sound('chip'); }
+
+/* ---------- главный шаг ---------- */
+function updateGame(dt) {
+  S.t += dt;
+  if (!S.night) S.dayT = clamp(S.t / CFG.dayLen, 0, 1.05);
+  if (S.msg) { S.msg.t += dt; if (S.msg.t > S.msg.dur) S.msg = null; }
+  if (S.flash) { S.flash.t += dt; if (S.flash.t > S.flash.dur) S.flash = null; }
+  S.shake = Math.max(0, S.shake - dt);
+
+  // полёт
+  if (S.fly) {
+    const F = S.fly; F.t += dt; const u = clamp(F.t / F.dur, 0, 1), e = easeInOut(u);
+    cam.p = V3.bez(F.a, F.c, F.b, e);
+    const q = V3.bez(F.a, F.c, F.b, Math.min(1, e + 0.05)), d = V3.sub(q, cam.p);
+    if (V3.len(d) > 1e-4 && u < 0.85 && F.dur > 0.7) { S.yawT = Math.atan2(d[0], d[2]); S.pitchT = clamp(Math.atan2(d[1], Math.hypot(d[0], d[2])) * 0.6 - 0.06, -0.5, 0.3); }
+    if (u >= 1) arrive(F.tg);
+  }
+  // оглушение после стекла: падение в траву
+  if (S.mode === 'stunned') {
+    S.stun += dt; const f = S.fall;
+    if (f) { f.t += dt; const k = smooth(0.15, 0.85, f.t); cam.p = V3.lerp(f.a, f.b, k); cam.roll = Math.sin(Math.min(1, f.t) * 2.4) * 0.5 * (1 - smooth(1.2, 2.6, f.t)); S.pitchT = -0.15 - 0.3 * k; }
+    if (S.stun > 2.8) { S.mode = 'perch'; S.fall = null; cam.roll = 0; S.perchKey = 'snow'; S.here = null; say('Птица пришла в себя в траве.'); }
+  }
+  // кормление
+  if (S.mode === 'feed' && S.feed) {
+    const tg = S.feed.tg; S.feed.t += dt; S.peck += dt;
+    // корм не кончается: птица клюёт, пока сама не улетит
+    const take = dt / tg.dur;
+    S.E = Math.min(1, S.E + tg.gain * take);
+    if (tg.kind === 'feeder' && !S.hawk.active && !S.feed.hawked && S.feed.t > 1.6) { S.feed.hawked = true; spawnHawk(); }
+    if (tg.kind === 'berries' && tg.c.kind === 'aronia' && !S.cat.stalk && !S.feed.catted && S.feed.t > 1.2) { S.feed.catted = true; spawnCat(perch('aronia')); }
+  } else S.peck = 0;
+  finishStep(dt);
+}
+function finishStep(dt) {
+  // ястреб приходит и сам, если птица долго на открытом месте
+  // изредка сосед перекликается
+  for (const s of S.sounds) s.t += dt; S.sounds = S.sounds.filter(s => s.t < s.dur);
+
+  // сумерки и ночь
+  if (!S.night && !S.duskSaid && S.dayT > 0.78) { S.duskSaid = true; say(S.E >= CFG.energy.need ? 'Смеркается. Запаса хватает — можно лететь в ель на ночлег.' : 'Смеркается, а запаса мало — успейте подкрепиться.', S.E >= CFG.energy.need ? 'good' : 'ev', 6); }
+  if (!S.night && (S.dayT >= 1 || S.sleep)) {
+    if (S.perchKey === 'roost') { S.night = true; S.nightT = 0; }
+    else if (!S.fly && S.mode !== 'stunned') { say('Стемнело — птица летит в ель на ночлег.'); flyTo(target('roost'), { forced: true }); S.sleep = true; }
+  }
+  if (S.night) S.nightT += dt;
+  if (S.dayT >= 1 && !S.night) S.t = Math.min(S.t, CFG.dayLen * 1.04);
+
+  if (!S.fed && S.E >= CFG.energy.need) { S.fed = true; S.satT = 0; say('Наелась! Запаса хватает на ночь: пелена по краям рассеялась.', 'good', 6); }
+  if (S.satT != null) S.satT += dt;
+  updateGaze(dt); updateCamera(dt); updateHawk(dt); updateCat(dt); updateSmell(dt);
+}
+
+/* ---------- взгляд: курсор — точка внимания; у края экрана голова поворачивается ---------- */
+function gazePoint() { return INPUT.known && UI.introGone ? [INPUT.x, INPUT.y] : [VW / 2, VH * 0.48]; }
+function updateGaze(dt) {
+  if (S.fly || S.mode === 'stunned' || S.night) return;
+  const [gx, gy] = gazePoint(), cx = gx / VW - 0.5, cy = gy / VH - 0.5;
+  if (INPUT.known && UI.introGone) {
+    const edge = 0.36;
+    if (Math.abs(cx) > edge) S.yawBase += Math.sign(cx) * (Math.abs(cx) - edge) / (0.5 - edge) * 1.5 * dt;
+    if (Math.abs(cy) > 0.38) S.pitchBase = clamp(S.pitchBase - Math.sign(cy) * (Math.abs(cy) - 0.38) / 0.12 * 0.7 * dt, -1.0, 0.6);
+  }
+  // голова чуть тянется к точке внимания
+  S.yawT = S.yawBase + clamp(cx, -0.5, 0.5) * HFOV * 0.18;
+  S.pitchT = clamp(S.pitchBase - clamp(cy, -0.5, 0.5) * VFOV * 0.14, -1.1, 0.8);
+}
+function updateCamera(dt) {
+  const k = S.fly ? 5 : REDUCED ? 7 : 4;
+  cam.yaw += wrap(S.yawT - cam.yaw) * Math.min(1, dt * k);
+  cam.pitch += (S.pitchT - cam.pitch) * Math.min(1, dt * k);
+}
+function headOffset() {
+  let p = 0;
+  if (S.peck > 0) p -= (REDUCED ? 0.04 : 0.11) * Math.pow(Math.max(0, Math.sin(S.peck * 8)), 2);
+  if (S.fly && !REDUCED) p += Math.sin(S.fly.t * 18) * 0.012;
+  return p;
+}
+function shakeOffset() { return S.shake > 0 && !REDUCED ? [Math.sin(S.t * 70) * 0.02 * S.shake, Math.cos(S.t * 63) * 0.02 * S.shake] : [0, 0]; }
+
+/* ---------- клик: куда лететь ---------- */
+function clickAt(sx, sy) {
+  if (S.night || S.mode === 'stunned' || (S.fly && S.fly.forced)) return;
+  const h = hitTest(sx, sy); if (!h) return;
+  if (S.here && S.here.id === h.id && S.mode === 'feed') return;
+  if (S.here && S.here.id === h.id && !S.fly) { arrive(h); return; }
+  flyTo(h);
+}
+
+/* =====================================================================
+   6. ВВОД: курсор — взгляд, клик — полёт, клавиши
+   ===================================================================== */
+const canvas = document.getElementById('scene');
+const INPUT = { x: null, y: null, known: false, type: 'mouse', down: false, dx: 0, dy: 0, moved: 0 };
+const KEYS = {};
+let paused = false, aboutOpen = false, humanOn = true, fast = false, soundOn = true;
+
+// что под курсором (цель полёта)
+function hitTest(sx, sy) {
+  const list = [];
+  const add = (p, rpx, tg, bias) => { if (!tg || !p) return; const s = W2S(p); if (s.ok && Math.hypot(s.x - sx, s.y - sy) < Math.min(130, rpx(s))) list.push({ d: s.w + (bias || 0), tg }); };
+  for (const t of S.targets) {
+    if (t === S.here && !S.fly) continue;   // то место, где птица сидит, не перекрывает остальной экран
+    if (t.kind === 'berries') add(t.pos, s => Math.max(18, 0.24 * s.s), t);
+    else if (t.kind === 'feeder') add(t.pos, s => Math.max(26, 0.5 * s.s), t);
+    else if (t.kind === 'larva' && !S.larvaEaten) add(t.pos, s => Math.max(22, 0.35 * s.s), t, -0.3);
+  }
+  // ствол берёзы
+  const a = W2S([Y.birch.x, 0.6, Y.birch.z]), b = W2S([Y.birch.x, 5, Y.birch.z]);
+  if (a.ok && b.ok) {
+    const vx = b.x - a.x, vy = b.y - a.y, L = vx * vx + vy * vy || 1, u = clamp(((sx - a.x) * vx + (sy - a.y) * vy) / L, 0, 1);
+    const px = a.x + vx * u, py = a.y + vy * u, w = W2S([Y.birch.x, lerp(0.6, 5, u), Y.birch.z]);
+    if (Math.hypot(sx - px, sy - py) < Math.max(14, 0.3 * w.s)) list.push({ d: w.w + 0.2, tg: S.larvaEaten ? target('bark') : target('larva') });
+  }
+  const g = Y.house.glass.map(W2S);
+  if (g.every(p => p.ok) && pointInPoly(sx, sy, g)) list.push({ d: g[0].w, tg: target('window') });
+  const sp = W2S([Y.spruce.x, 4, Y.spruce.z]);
+  const danger = threatOn(), big = danger ? 1.5 : 1;
+  if (sp.ok && Math.abs(sp.x - sx) < Math.max(50, 2.6 * sp.s) * big && Math.abs(sp.y - sy) < Math.max(70, 4.8 * sp.s) * big) list.push({ d: danger ? -1 : sp.w + 2, tg: target('roost') });
+  // стрелка «в укрытие» у края экрана во время тревоги
+  if (S.escapeBtn && Math.abs(sx - S.escapeBtn.x) < 90) return target('roost');
+  if (!list.length) return null;
+  list.sort((p, q) => p.d - q.d);
+  return list[0].tg;
+}
+function pointInPoly(x, y, P) {
+  let c = false;
+  for (let i = 0, j = P.length - 1; i < P.length; j = i++) if (((P[i].y > y) !== (P[j].y > y)) && (x < (P[j].x - P[i].x) * (y - P[i].y) / (P[j].y - P[i].y) + P[i].x)) c = !c;
+  return c;
+}
+function updateHover() { S.hover = INPUT.known && UI.introGone && !S.fly ? hitTest(INPUT.x, INPUT.y) : null; }
+
+canvas.addEventListener('pointerdown', e => {
+  if (e.button > 0) return;
+  canvas.focus({ preventScroll: true });
+  INPUT.x = e.clientX; INPUT.y = e.clientY; INPUT.known = true; INPUT.type = e.pointerType || 'mouse'; INPUT.down = true; INPUT.moved = 0;
+  INPUT.sx = e.clientX; INPUT.sy = e.clientY;
+  if (!UI.introGone) { hideIntro(); e.preventDefault(); return; }
+  e.preventDefault();
+});
+canvas.addEventListener('pointermove', e => {
+  if (INPUT.down) INPUT.moved += Math.hypot(e.clientX - INPUT.x, e.clientY - INPUT.y);
+  INPUT.x = e.clientX; INPUT.y = e.clientY; INPUT.known = true; INPUT.type = e.pointerType || 'mouse';
+});
+canvas.addEventListener('pointerup', e => {
+  const wasDown = INPUT.down; INPUT.down = false;
+  if (!wasDown || !UI.introGone || paused) return;
+  if (INPUT.moved < (e.pointerType === 'touch' ? 18 : 8)) clickAt(e.clientX, e.clientY);
+});
+canvas.addEventListener('pointercancel', () => { INPUT.down = false; });
+canvas.addEventListener('pointerleave', e => { if (e.pointerType !== 'touch') INPUT.known = false; });
+canvas.addEventListener('contextmenu', e => e.preventDefault());
+window.addEventListener('blur', () => { INPUT.down = false; });
+document.addEventListener('visibilitychange', () => { lastFrame = performance.now(); });
+
+function setKey(id, html, on) { const k = document.getElementById(id); if (!k) return; k.innerHTML = html; k.classList.toggle('on', !!on); }
+function handleKey(code, e) {
+  if (aboutOpen) { if (code === 'Escape' || code === 'About' || code === 'KeyD') { closeAbout(); if (e) e.preventDefault(); } return; }
+  if (!UI.introGone && code !== 'About') { hideIntro(); if (code === 'Space' || code === 'Enter') return; }
+  switch (code) {
+    case 'KeyH': humanOn = !humanOn; UI.human.classList.toggle('off', !humanOn); break;
+    case 'KeyM': soundOn = !soundOn; setKey('keyM', '<b>M</b>' + (soundOn ? 'звук' : 'звук выкл.'), !soundOn); if (soundOn) ensureAudio(); break;
+    case 'About': case 'KeyD': openAbout(); break;
+    case 'KeyP': setPaused(!paused); break;
+    case 'KeyF': fast = !fast; setKey('keyF', '<b>F</b>' + (fast ? 'время ×' + CFG.fast : 'быстрее'), fast); break;
+    case 'KeyR': restart(currentSeed); break;
+    case 'KeyG': restart(currentSeed + 1); break;
+    case 'Escape': if (paused) setPaused(false); else if (humanOn) handleKey('KeyH'); break;
+  }
+}
+window.addEventListener('keydown', e => { if (e.metaKey || e.ctrlKey || e.altKey) return; handleKey(e.code, e); });
+document.getElementById('keys').addEventListener('click', e => { const t = e.target.closest('[data-key]'); if (t) handleKey(t.dataset.key, null); });
+
+/* =====================================================================
+   7. ОТРИСОВКА: WebGL-сцена + слой интерфейса (2D поверх)
+   ===================================================================== */
+let VW = 1, VH = 1, DPR = 1, PV = M4.ident(), Pm = M4.ident(), VFOV = 1, HFOV = 1;
+const gl = canvas.getContext('webgl', { antialias: true, stencil: true, alpha: false });
+const ov = document.getElementById('ov'), octx = ov.getContext('2d');
+
+const VS = `
+attribute vec3 aP; attribute vec3 aN; attribute vec3 aC; attribute vec2 aM;
+uniform mat4 uPV; uniform mat4 uM; uniform vec3 uEye; uniform vec3 uSun; uniform vec3 uSunCol;
+uniform vec3 uAmbT; uniform vec3 uAmbB; uniform vec3 uSkyT; uniform vec3 uSkyH; uniform vec3 uUV;
+uniform float uBird; uniform float uFogD; uniform float uFar; uniform vec3 uTint; uniform vec3 uEmit;
+varying vec3 vC; varying float vF; varying vec3 vW;
+void main(){
+  vec4 w = uM * vec4(aP, 1.0); vW = w.xyz;
+  gl_Position = uPV * w;
+  if (uFar > 0.5) gl_Position.z = gl_Position.w * 0.99999;
+  vF = 0.0;
+  if (aM.y > 0.5 && aM.y < 1.5) { float h = clamp(normalize(aP).y, 0.0, 1.0); vC = mix(uSkyH, uSkyT, pow(h, 0.5)); return; }
+  if (aM.y > 1.5) { vC = aC * uTint; return; }
+  vec3 N = normalize((uM * vec4(aN, 0.0)).xyz);
+  if (dot(N, uEye - w.xyz) < 0.0) N = -N;
+  float d = max(dot(N, uSun), 0.0);
+  vec3 amb = mix(uAmbB, uAmbT, N.y * 0.5 + 0.5);
+  vec3 col = aC * (amb + uSunCol * d);
+  float uv = aM.x * uBird;
+  col = mix(col, uUV, uv * 0.22) + uUV * uv * 0.16;
+  vC = col + uEmit;
+  vF = (1.0 - exp(-length(w.xyz - uEye) * uFogD)) * (1.0 - min(1.0, length(uEmit) * 2.0));
+}`;
+const FS = `
+precision mediump float;
+varying vec3 vC; varying float vF; varying vec3 vW;
+uniform vec3 uFog; uniform vec3 uLens; uniform float uLensOn; uniform vec4 uClip; uniform float uClipOn; uniform float uAlpha;
+void main(){
+  if (uLensOn > 0.5 && distance(gl_FragCoord.xy, uLens.xy) > uLens.z) discard;
+  if (uClipOn > 0.5 && dot(vW, uClip.xyz) - uClip.w > 0.0) discard;
+  gl_FragColor = vec4(mix(vC, uFog, vF), uAlpha);
+}`;
+let PROG = null, U = {}, A = {}, MESH = {};
+function initGL() {
+  if (!gl) return false;
+  const sh = (t, src) => { const s = gl.createShader(t); gl.shaderSource(s, src); gl.compileShader(s); if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s)); return s; };
+  PROG = gl.createProgram(); gl.attachShader(PROG, sh(gl.VERTEX_SHADER, VS)); gl.attachShader(PROG, sh(gl.FRAGMENT_SHADER, FS)); gl.linkProgram(PROG);
+  if (!gl.getProgramParameter(PROG, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(PROG));
+  gl.useProgram(PROG);
+  ['uPV', 'uM', 'uEye', 'uSun', 'uSunCol', 'uAmbT', 'uAmbB', 'uSkyT', 'uSkyH', 'uUV', 'uBird', 'uFogD', 'uFar', 'uTint', 'uEmit', 'uFog', 'uLens', 'uLensOn', 'uClip', 'uClipOn', 'uAlpha'].forEach(n => U[n] = gl.getUniformLocation(PROG, n));
+  ['aP', 'aN', 'aC', 'aM'].forEach(n => A[n] = gl.getAttribLocation(PROG, n));
+  gl.enable(gl.DEPTH_TEST);
+  MESH.sky = upload(buildSky()); MESH.beak = upload(buildBeak());
+  const h = buildHawk(); MESH.hawk = upload(h.body); MESH.wingR = upload(h.wing);
+  const wl = new Geo(); for (let i = 0; i < h.wing.a.length; i += 11) { const v = h.wing.a.slice(i, i + 11); v[0] = -v[0]; v[3] = -v[3]; wl.a.push(...v); } MESH.wingL = upload(wl);
+  const c = buildCat(); MESH.cat = upload(c.body); MESH.tail = upload(c.tail); MESH.larva = upload(buildLarva());
+  return true;
+}
+function upload(g, old) {
+  const buf = old ? old.buf : gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, buf); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(g.a), gl.STATIC_DRAW);
+  return { buf, n: g.count };
+}
+function rebuildWorld() {
+  const w = buildWorld();
+  MESH.world = upload(w.world, MESH.world); MESH.spruce = upload(w.spruce, MESH.spruce); MESH.house = upload(w.house, MESH.house); MESH.glass = upload(w.glass, MESH.glass);
+  MIRROR = M4.mirror(Y.house.W, Y.house.n);
+  window.__tris = { world: MESH.world.n / 3, house: MESH.house.n / 3 };
+}
+let MIRROR = M4.ident();
+const IDENT = M4.ident();
+function draw(m, M) {
+  gl.bindBuffer(gl.ARRAY_BUFFER, m.buf);
+  gl.enableVertexAttribArray(A.aP); gl.vertexAttribPointer(A.aP, 3, gl.FLOAT, false, 44, 0);
+  gl.enableVertexAttribArray(A.aN); gl.vertexAttribPointer(A.aN, 3, gl.FLOAT, false, 44, 12);
+  gl.enableVertexAttribArray(A.aC); gl.vertexAttribPointer(A.aC, 3, gl.FLOAT, false, 44, 24);
+  gl.enableVertexAttribArray(A.aM); gl.vertexAttribPointer(A.aM, 2, gl.FLOAT, false, 44, 36);
+  gl.uniformMatrix4fv(U.uM, false, M || IDENT);
+  gl.drawArrays(gl.TRIANGLES, 0, m.n);
+}
+
+// свет дня и палитра: «птица» (с ультрафиолетом) или «человек»
+function sceneLight(bird) {
+  const u = S.dayT, n = S.night ? smooth(0, 3, S.nightT) : 0;
+  const dawn = 1 - smooth(0, 0.14, u), dusk = smooth(0.7, 1.0, u);
+  let skyT = hex('#79A2D6'), skyH = hex('#DCE6EE');
+  skyT = mixc(skyT, hex('#B7AECB'), dawn * 0.7); skyH = mixc(skyH, hex('#F1DCD2'), dawn * 0.6);
+  skyT = mixc(skyT, hex('#5C6690'), dusk * 0.8); skyH = mixc(skyH, hex('#D8A796'), dusk * 0.7);
+  skyT = mixc(skyT, hex('#121829'), n); skyH = mixc(skyH, hex('#262B43'), n);
+  if (bird) { skyT = mixc(skyT, hex('#8B7BD0'), 0.42 * (1 - n)); skyH = mixc(skyH, hex('#ECE1F5'), 0.35 * (1 - n)); }
+  const sunI = (1 - dusk * 0.6) * (1 - dawn * 0.35) * (1 - n * 0.95);
+  const warm = Math.max(dusk, dawn);
+  const elev = 0.2 + 0.5 * Math.sin(Math.PI * clamp(u, 0, 1));
+  return {
+    sun: V3.norm([-0.38, elev, -0.87]), sunCol: V3.sc(mixc([1, 0.95, 0.85], [1, 0.72, 0.56], warm), 0.72 * sunI),
+    ambT: V3.sc(mixc([0.66, 0.7, 0.8], [0.45, 0.46, 0.62], dusk * 0.8), 1 - n * 0.78),
+    ambB: V3.sc(mixc([0.6, 0.66, 0.52], [0.5, 0.48, 0.5], dusk * 0.8), 1 - n * 0.78),
+    skyT, skyH, fog: skyH, uv: bird ? [0.62, 0.34, 0.95] : [0, 0, 0], bird: bird ? 1 - n * 0.4 : 0, dark: 1 - n * 0.7
+  };
+}
+
+function computeCamera() {
+  const aspect = VW / VH;
+  VFOV = Math.min(CFG.vfovMax, 2 * Math.atan(Math.tan(CFG.hfov / 2) / aspect));
+  HFOV = 2 * Math.atan(Math.tan(VFOV / 2) * aspect);
+  const sh = shakeOffset();
+  const pitch = cam.pitch + headOffset() + sh[1], yaw = cam.yaw + sh[0];
+  const f = [Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch)];
+  const r = [Math.cos(yaw), 0, -Math.sin(yaw)], up = V3.add(V3.sc([0, 1, 0], Math.cos(cam.roll)), V3.sc(r, Math.sin(cam.roll)));
+  Pm = M4.persp(VFOV, aspect, 0.012, 1500);
+  PV = M4.mul(Pm, M4.look(cam.p, V3.add(cam.p, f), up));
+}
+// мировая точка → экран (CSS-пиксели); s — пикселей на метр на этой глубине
+// с какой стороны экрана находится точка (−1 слева, +1 справа) — по той же проекции, что и кадр, даже если точка за спиной
+function screenSide(p) { const m = PV; return (m[0] * p[0] + m[4] * p[1] + m[8] * p[2] + m[12]) >= 0 ? 1 : -1; }
+function W2S(p) {
+  const m = PV, x = p[0], y = p[1], z = p[2];
+  const cx = m[0] * x + m[4] * y + m[8] * z + m[12], cy = m[1] * x + m[5] * y + m[9] * z + m[13], cw = m[3] * x + m[7] * y + m[11] * z + m[15];
+  if (cw <= 0.05) return { ok: false, w: cw, x: 0, y: 0, s: 0 };
+  return { ok: true, x: (cx / cw * 0.5 + 0.5) * VW, y: (1 - (cy / cw * 0.5 + 0.5)) * VH, w: cw, s: VH / (2 * Math.tan(VFOV / 2) * cw) };
+}
+
+function drawDynamic() {
+  const H = S.hawk;
+  if (H.active) {
+    const yaw = Math.atan2(H.v[0], H.v[2]), pitch = Math.asin(clamp(H.v[1], -1, 1));
+    const M = M4.pose(H.p, yaw, pitch, 0, 1.2);
+    const fl = H.v[1] > -0.05 ? Math.sin(H.flap) * 0.55 : 0.12;
+    draw(MESH.hawk, M); draw(MESH.wingR, M4.mul(M, M4.pose([0, 0, 0], 0, 0, fl))); draw(MESH.wingL, M4.mul(M, M4.pose([0, 0, 0], 0, 0, -fl)));
+  }
+  if (!S.larvaEaten) {
+    // гусеница лежит на листе, зелёная на зелёном — глазом её почти не видно
+    const d = Y.larvaDir, yaw = Math.atan2(d[0], d[2]) + 1.9, up = 0.004 + 0.03 * S.larvaOut;
+    const M = M4.pose(V3.add(Y.larva, [-d[0] * 0.01, up, -d[2] * 0.01]), yaw, Math.sin(S.t * 2.2) * 0.06, 0, 1.15);
+    draw(MESH.larva, M);
+  }
+  {
+    const c = S.cat.p, K = S.cat.stalk, yaw = K ? Math.atan2(K.to[0] - c[0], K.to[2] - c[2]) || S.cat.yaw || 0 : (S.cat.back != null ? Math.atan2(Y.cat.x - c[0], Y.cat.z - c[2]) : (S.cat.yaw || 0));
+    S.cat.yaw = yaw;
+    const M = M4.pose([c[0], (S.cat.y || 0) + Math.abs(Math.sin((S.cat.walk || 0) * 7)) * 0.015, c[2]], yaw, 0, 0, 1);
+    draw(MESH.cat, M);
+    const fl = S.cat.flick > 0 ? Math.sin(S.cat.flick * 9) * 0.7 * (1 - S.cat.flick / 1.8) : 0;
+    draw(MESH.tail, M4.mul(M, M4.pose([0, 0.1, -0.25], fl + Math.sin(S.t * 0.7) * 0.08, 0, 0, 1)));
+  }
+}
+
+function renderGL(human, lens) {
+  const L = sceneLight(!human);
+  gl.viewport(0, 0, canvas.width, canvas.height);
+  gl.uniformMatrix4fv(U.uPV, false, PV);
+  gl.uniform3fv(U.uEye, cam.p); gl.uniform3fv(U.uSun, L.sun); gl.uniform3fv(U.uSunCol, L.sunCol);
+  gl.uniform3fv(U.uAmbT, L.ambT); gl.uniform3fv(U.uAmbB, L.ambB); gl.uniform3fv(U.uSkyT, L.skyT); gl.uniform3fv(U.uSkyH, L.skyH);
+  gl.uniform3fv(U.uUV, L.uv); gl.uniform1f(U.uBird, L.bird); gl.uniform1f(U.uFogD, 0.011); gl.uniform3fv(U.uFog, L.fog);
+  gl.uniform1f(U.uFar, 0); gl.uniform1f(U.uClipOn, 0); gl.uniform1f(U.uAlpha, 1); gl.uniform3fv(U.uEmit, [0, 0, 0]); gl.uniform3fv(U.uTint, [L.dark, L.dark, L.dark]);
+  if (lens) {
+    gl.uniform1f(U.uLensOn, 1); gl.uniform3fv(U.uLens, [lens.x * DPR, (VH - lens.y) * DPR, lens.r * DPR]);
+    gl.enable(gl.SCISSOR_TEST); gl.scissor(Math.floor((lens.x - lens.r) * DPR), Math.floor((VH - lens.y - lens.r) * DPR), Math.ceil(lens.r * 2 * DPR) + 1, Math.ceil(lens.r * 2 * DPR) + 1);
+    gl.clear(gl.DEPTH_BUFFER_BIT | gl.STENCIL_BUFFER_BIT);
+  } else {
+    gl.uniform1f(U.uLensOn, 0); gl.disable(gl.SCISSOR_TEST);
+    gl.clearColor(L.fog[0], L.fog[1], L.fog[2], 1); gl.clearStencil(0);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT | gl.STENCIL_BUFFER_BIT);
+  }
+  gl.depthMask(false); draw(MESH.sky, M4.trans(cam.p)); gl.depthMask(true);
+  draw(MESH.world); draw(MESH.house); drawDynamic();
+  // при угрозе ель «горит» зелёным: укрытие
+  const pz = 0.5 + 0.5 * Math.sin(performance.now() / 160), on = !human && threatOn();
+  gl.uniform3fv(U.uEmit, on ? [0.05 + 0.08 * pz, 0.42 + 0.3 * pz, 0.08 + 0.06 * pz] : [0, 0, 0]);
+  draw(MESH.spruce); gl.uniform3fv(U.uEmit, [0, 0, 0]);
+  // отражение в стекле: метим видимую часть стекла, сбрасываем там глубину и рисуем отражённый двор
+  if (Y.house.glass.some(p => W2S(p).ok)) {
+    gl.enable(gl.STENCIL_TEST);
+    gl.stencilFunc(gl.ALWAYS, 1, 0xff); gl.stencilOp(gl.KEEP, gl.KEEP, gl.REPLACE);
+    gl.colorMask(false, false, false, false); gl.depthMask(false); gl.depthFunc(gl.LEQUAL);
+    draw(MESH.glass);
+    gl.stencilFunc(gl.EQUAL, 1, 0xff); gl.stencilOp(gl.KEEP, gl.KEEP, gl.KEEP);
+    gl.depthMask(true); gl.depthFunc(gl.ALWAYS); gl.uniform1f(U.uFar, 1); draw(MESH.glass); gl.uniform1f(U.uFar, 0);
+    gl.depthFunc(gl.LESS); gl.colorMask(true, true, true, true);
+    const n = Y.house.n; gl.uniform4fv(U.uClip, [n[0], n[1], n[2], V3.dot(n, Y.house.W) + 0.01]); gl.uniform1f(U.uClipOn, 1);
+    gl.depthMask(false); draw(MESH.sky, M4.mul(MIRROR, M4.trans(cam.p))); gl.depthMask(true);
+    gl.uniform1f(U.uFogD, 0.005); draw(MESH.world, MIRROR); draw(MESH.spruce, MIRROR); gl.uniform1f(U.uFogD, 0.011);
+    gl.uniform1f(U.uClipOn, 0);
+    gl.disable(gl.STENCIL_TEST);
+    gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false);
+    gl.uniform1f(U.uAlpha, 0.13); gl.uniform3fv(U.uTint, human ? [0.62, 0.72, 0.82] : [0.72, 0.66, 0.9]);
+    draw(MESH.glass);
+    gl.uniform1f(U.uAlpha, 1); gl.uniform3fv(U.uTint, [L.dark, L.dark, L.dark]); gl.depthMask(true); gl.disable(gl.BLEND);
+  }
+  // кончик собственного клюва — в системе координат головы
+  gl.clear(gl.DEPTH_BUFFER_BIT);
+  gl.uniformMatrix4fv(U.uPV, false, Pm); gl.uniform3fv(U.uEye, [0, 0, 0]);
+  draw(MESH.beak);
+  gl.disable(gl.SCISSOR_TEST);
+}
+
+/* ---------- слой интерфейса (2D) ---------- */
+const COL = { uv: '#A24DFF', path: '#2E7D86', bad: '#B0413E', ink: '#24231F', paper: 'rgba(242,238,229,.92)' };
+function label(x, y, text, dx, dy, col, a) {
+  if (!humanOn || x < -10 || x > VW + 10 || y < -10 || y > VH + 10) return;
+  const c = octx; c.save(); c.globalAlpha = a;
+  c.font = '13px ' + getComputedStyle(document.body).getPropertyValue('--sans');
+  const w = c.measureText(text).width + 14, h = 22;
+  let X = x + dx, Yy = y + dy;
+  X = clamp(X, 8 + (dx < 0 ? w : 0), VW - 8 - (dx < 0 ? 0 : w)); Yy = clamp(Yy, 70, bottomLimit() - 14);
+  c.strokeStyle = col; c.lineWidth = 1; c.beginPath(); c.moveTo(x, y); c.lineTo(X, Yy); c.stroke();
+  const bx = dx < 0 ? X - w : X, by = Yy - h / 2;
+  c.fillStyle = COL.paper; c.fillRect(bx, by, w, h); c.strokeRect(bx + 0.5, by + 0.5, w - 1, h - 1);
+  c.fillStyle = COL.ink; c.textBaseline = 'middle'; c.fillText(text, bx + 6, Yy + 0.5);
+  c.restore();
+}
+function ring(s, R, col, lw, dash, a) {
+  const c = octx; c.save(); c.globalAlpha = a; c.strokeStyle = col; c.lineWidth = lw; c.setLineDash(dash || []);
+  c.beginPath(); c.arc(s.x, s.y, R, 0, 6.2832); c.stroke(); c.restore();
+}
+function path3(a, b, lift, col, a0, arrow) {
+  const c = octx, mid = V3.add(V3.lerp(a, b, 0.5), [0, lift, 0]);
+  c.save(); c.globalAlpha = a0; c.strokeStyle = col; c.lineWidth = 2.2; c.setLineDash([7, 6]); c.lineDashOffset = -performance.now() / 60;
+  c.beginPath(); let started = false, last = null, prev = null;
+  for (let k = 2; k <= 30; k++) {
+    const s = W2S(V3.bez(a, mid, b, k / 30));
+    if (!s.ok) { started = false; continue; }
+    if (!started) { c.moveTo(s.x, s.y); started = true; } else c.lineTo(s.x, s.y);
+    prev = last; last = s;
+  }
+  c.stroke(); c.setLineDash([]);
+  if (arrow && last && prev) { const ang = Math.atan2(last.y - prev.y, last.x - prev.x); c.fillStyle = col; c.beginPath(); c.moveTo(last.x, last.y); c.lineTo(last.x - 11 * Math.cos(ang - 0.4), last.y - 11 * Math.sin(ang - 0.4)); c.lineTo(last.x - 11 * Math.cos(ang + 0.4), last.y - 11 * Math.sin(ang + 0.4)); c.fill(); }
+  c.restore();
+  return last;
+}
+const DANGER = '#E8231B', DANGER_DARK = '#3A0B08';
+// силуэт хищной птицы с раскрытыми крыльями (единичные координаты)
+function hawkIcon(x, y, sz, a) {
+  const c = octx; c.save(); c.globalAlpha = a; c.translate(x, y); c.scale(sz, sz);
+  c.beginPath();
+  c.moveTo(0, -0.5); c.lineTo(0.13, -0.32); c.lineTo(0.55, -0.34); c.lineTo(1.0, -0.22); c.lineTo(0.88, -0.12); c.lineTo(0.98, -0.02);
+  c.lineTo(0.55, 0.02); c.lineTo(0.18, 0.08); c.lineTo(0.22, 0.52); c.lineTo(0, 0.6); c.lineTo(-0.22, 0.52); c.lineTo(-0.18, 0.08);
+  c.lineTo(-0.55, 0.02); c.lineTo(-0.98, -0.02); c.lineTo(-0.88, -0.12); c.lineTo(-1.0, -0.22); c.lineTo(-0.55, -0.34); c.lineTo(-0.13, -0.32); c.closePath();
+  c.fillStyle = DANGER; c.fill(); c.lineWidth = 0.07; c.strokeStyle = DANGER_DARK; c.lineJoin = 'round'; c.stroke();
+  c.restore();
+}
+function threat(p, a, icon) {
+  icon = icon || hawkIcon;
+  const c = octx, s = W2S(p), t = performance.now() / 1000, pulse = 0.6 + 0.4 * Math.sin(t * 8);
+  if (s.ok && s.x > 40 && s.x < VW - 40 && s.y > 40 && s.y < VH - 40) {
+    const R = Math.max(36, 1.1 * s.s);
+    ring(s, R, DANGER, 5, null, a * pulse); ring(s, R + 10, DANGER, 2, [6, 6], a * 0.7);
+    return;
+  }
+  const rel = wrap(Math.atan2(p[0] - cam.p[0], p[2] - cam.p[2]) - cam.yaw), side = screenSide(p);
+  const big = VW < 760 ? 0.75 : 1, x = side > 0 ? VW - 34 * big : 34 * big, y = VH * 0.45;
+  // красная полоса на краю поля зрения
+  c.save();
+  const g = c.createLinearGradient(side > 0 ? VW : 0, 0, side > 0 ? VW - 120 * big : 120 * big, 0);
+  g.addColorStop(0, 'rgba(232,35,27,' + (0.75 * a * pulse).toFixed(3) + ')'); g.addColorStop(1, 'rgba(232,35,27,0)');
+  c.fillStyle = g; c.fillRect(side > 0 ? VW - 120 * big : 0, 0, 120 * big, VH);
+  // крупные шевроны, бегущие к краю
+  c.lineCap = 'round'; c.lineJoin = 'round';
+  for (let k = 0; k < 3; k++) {
+    c.globalAlpha = a * (0.3 + 0.7 * Math.max(0, Math.sin(t * 7 - k * 0.9)));
+    const xx = x - side * k * 30 * big, h = 34 * big, w = 22 * big;
+    c.lineWidth = 11 * big; c.strokeStyle = DANGER_DARK; c.beginPath(); c.moveTo(xx - side * w, y - h); c.lineTo(xx, y); c.lineTo(xx - side * w, y + h); c.stroke();
+    c.lineWidth = 7 * big; c.strokeStyle = DANGER; c.stroke();
+  }
+  c.restore();
+  icon(x - side * 60 * big, y - 110 * big, 66 * big * (0.92 + 0.08 * pulse), a);
+}
+function hatch(P, a) {
+  const c = octx; c.save(); c.globalAlpha = a;
+  c.beginPath(); P.forEach((p, i) => i ? c.lineTo(p.x, p.y) : c.moveTo(p.x, p.y)); c.closePath();
+  c.strokeStyle = COL.uv; c.lineWidth = 2.2; c.stroke(); c.clip();
+  const xs = P.map(p => p.x), ys = P.map(p => p.y), x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+  c.lineWidth = 1.4; c.beginPath();
+  for (let x = x0 - (y1 - y0); x < x1; x += 9) { c.moveTo(x, y1); c.lineTo(x + (y1 - y0), y0); }
+  c.stroke(); c.fillStyle = 'rgba(123,63,176,.12)'; c.fillRect(x0, y0, x1 - x0, y1 - y0); c.restore();
+}
+// опасная зона кошки на снегу + значок хищника, как у ястреба
+function catZone(a) {
+  if (a < 0.01) return;
+  const C = [S.cat.p[0], 0, S.cat.p[2]], R = 1.5, pts = [], c = octx, t = performance.now() / 1000, pulse = 0.7 + 0.3 * Math.sin(t * 5);
+  for (let k = 0; k < 40; k++) { const an = k / 40 * 6.2832, s = W2S([C[0] + Math.cos(an) * R, 0.02, C[2] + Math.sin(an) * R]); if (!s.ok) return; pts.push(s); }
+  c.save(); c.globalAlpha = a;
+  c.beginPath(); pts.forEach((p, i) => i ? c.lineTo(p.x, p.y) : c.moveTo(p.x, p.y)); c.closePath();
+  c.fillStyle = 'rgba(232,35,27,' + (0.16 + 0.1 * pulse).toFixed(3) + ')'; c.fill();
+  c.setLineDash([10, 7]); c.lineDashOffset = -t * 30; c.lineWidth = 3; c.strokeStyle = DANGER; c.stroke(); c.setLineDash([]);
+  c.restore();
+  const top = W2S([C[0], 0.75, C[2]]); if (top.ok) catIcon(top.x, top.y, clamp(0.5 * top.s, 26, 60), a * (0.85 + 0.15 * pulse));
+}
+// силуэт идущей кошки с поднятым хвостом
+const CAT_PTS = [-0.838,-0.913,-0.914,-0.824,-0.978,-0.705,-1.0,-0.633,-1.0,-0.468,-0.971,-0.375,-0.938,-0.311,-0.892,-0.246,-0.802,-0.151,-0.677,-0.053,-0.725,0.017,-0.742,0.079,-0.74,0.153,-0.704,0.323,-0.704,0.38,-0.792,0.497,-0.809,0.533,-0.809,0.564,-0.79,0.64,-0.751,0.724,-0.656,0.867,-0.606,0.918,-0.551,0.949,-0.484,0.951,-0.431,0.925,-0.443,0.867,-0.563,0.812,-0.589,0.786,-0.608,0.731,-0.611,0.662,-0.601,0.624,-0.587,0.605,-0.474,0.547,-0.4,0.49,-0.391,0.511,-0.403,0.636,-0.19,0.846,-0.149,0.877,-0.085,0.901,-0.004,0.903,0.042,0.886,0.056,0.872,-0.097,0.736,-0.195,0.631,-0.209,0.602,-0.202,0.554,-0.183,0.521,-0.142,0.485,-0.059,0.449,0.068,0.425,0.207,0.423,0.238,0.43,0.274,0.466,0.341,0.573,0.369,0.652,0.381,0.815,0.4,0.853,0.427,0.882,0.458,0.903,0.608,0.903,0.536,0.805,0.508,0.75,0.498,0.717,0.498,0.683,0.508,0.664,0.579,0.743,0.697,0.927,0.735,0.963,0.785,0.963,0.806,0.848,0.74,0.757,0.642,0.588,0.591,0.476,0.587,0.418,0.601,0.354,0.644,0.239,0.706,0.112,0.754,0.038,0.806,-0.012,0.964,-0.088,0.998,-0.129,0.998,-0.208,0.83,-0.466,0.802,-0.619,0.766,-0.593,0.708,-0.511,0.618,-0.607,0.591,-0.616,0.46,-0.349,0.417,-0.282,0.348,-0.213,0.288,-0.179,0.245,-0.165,0.19,-0.155,0.097,-0.155,-0.3,-0.225,-0.608,-0.232,-0.687,-0.258,-0.768,-0.335,-0.821,-0.409,-0.859,-0.48,-0.873,-0.528,-0.873,-0.559,-0.859,-0.616,-0.838,-0.664,-0.795,-0.734,-0.749,-0.784,-0.692,-0.815,-0.582,-0.832,-0.544,-0.846,-0.565,-0.922,-0.642,-0.965,-0.747,-0.965,-0.799,-0.941];
+function catIcon(x, y, sz, a) {
+  const c = octx; c.save(); c.globalAlpha = a; c.translate(x, y); c.scale(sz, sz);
+  c.beginPath(); for (let i = 0; i < CAT_PTS.length; i += 2) { i ? c.lineTo(CAT_PTS[i], CAT_PTS[i + 1]) : c.moveTo(CAT_PTS[i], CAT_PTS[i + 1]); } c.closePath();
+  c.fillStyle = DANGER; c.fill(); c.lineWidth = 0.05; c.lineJoin = 'round'; c.strokeStyle = DANGER_DARK; c.stroke();
+  c.restore();
+}
+// красный силуэт кошки на месте тени
+function catMark(p, a) {
+  const s = W2S(p); if (!s.ok) return null;
+  const c = octx, t = performance.now() / 1000, sz = Math.max(50, 0.7 * s.s), pulse = 0.7 + 0.3 * Math.sin(t * 5);
+  c.save(); c.globalAlpha = a * 0.5 * pulse;
+  const g = c.createRadialGradient(s.x, s.y, 0, s.x, s.y, sz * 1.6); g.addColorStop(0, 'rgba(232,35,27,.6)'); g.addColorStop(1, 'rgba(232,35,27,0)');
+  c.fillStyle = g; c.beginPath(); c.arc(s.x, s.y, sz * 1.6, 0, 6.2832); c.fill();
+  c.globalAlpha = a * (0.8 + 0.2 * pulse); c.translate(s.x, s.y); c.scale(sz, sz);
+  const dir = (W2S([Y.seeds.x, 0.15, Y.seeds.z]).x || s.x) < s.x ? -1 : 1; c.scale(dir, 1);
+  c.beginPath();
+  c.ellipse(-0.05, 0.12, 0.62, 0.3, 0, 0, 6.2832);
+  c.moveTo(0.92, -0.12); c.arc(0.66, -0.12, 0.26, 0, 6.2832);
+  c.moveTo(0.5, -0.3); c.lineTo(0.55, -0.62); c.lineTo(0.68, -0.36); c.closePath();
+  c.moveTo(0.74, -0.36); c.lineTo(0.88, -0.62); c.lineTo(0.9, -0.3); c.closePath();
+  c.fillStyle = DANGER; c.fill();
+  c.lineWidth = 0.15; c.strokeStyle = DANGER; c.lineCap = 'round';
+  c.beginPath(); c.moveTo(-0.6, 0.15); c.quadraticCurveTo(-1.05, 0.05, -0.95, -0.4); c.stroke();
+  c.restore();
+  return s;
+}
+// ультрафиолетовое свечение налёта: птица видит его сама, без интерфейса
+function uvGlow(s, R, k) {
+  const c = octx; c.save();
+  const g = c.createRadialGradient(s.x, s.y, 0, s.x, s.y, R);
+  g.addColorStop(0, 'rgba(176,96,255,' + Math.min(1, 0.78 * k).toFixed(3) + ')'); g.addColorStop(0.5, 'rgba(160,80,250,' + Math.min(1, 0.5 * k).toFixed(3) + ')'); g.addColorStop(1, 'rgba(150,70,245,0)');
+  c.fillStyle = g; c.beginPath(); c.arc(s.x, s.y, R, 0, 6.2832); c.fill(); c.restore();
+}
+function drawUV() {
+  if (S.night) return;
+  for (const c of Y.clusters) {
+    if (c.kind === 'rosehip') continue;
+    const d = V3.len(V3.sub(c.pos, cam.p)); if (d > 16) continue;
+    const s = W2S(c.pos); if (!s.ok || s.x < -60 || s.x > VW + 60) continue;
+    // на глаз птицы свежие и подпорченные светятся почти одинаково
+    uvGlow(s, clamp(0.17 * s.s, 4, 70), (c.q > 0.6 ? 1 : 0.85) * (1 - S.dayT * 0.4));
+  }
+}
+// метка интерфейса «лучший корм»: яркое кольцо и усиленное свечение
+function bestFood(p, Rm, a) {
+  const s = W2S(p); if (!s.ok) return;
+  const R = clamp(Rm * s.s, 16, 100), t = performance.now() / 1000, pulse = 0.75 + 0.25 * Math.sin(t * 4);
+  const c = octx; c.save(); c.globalAlpha = a; uvGlow(s, R * 0.75, 1.1); c.restore();
+  ring(s, R, '#FFFFFF', 7, null, a * 0.8);
+  ring(s, R, '#A24DFF', 4.5, null, a);
+  ring(s, R + 9 + 4 * pulse, '#A24DFF', 2, null, a * 0.6 * pulse);
+}
+function bottomLimit() { return VW < 760 && humanOn && UI.epTop ? UI.epTop - 6 : VH - 16; }
+function gaugeGeom() { return VW < 760 ? { x: VW / 2, y: bottomLimit(), R: 40 } : { x: VW / 2, y: VH - 6, R: 60 }; }
+function gauge(extra) {
+  const c = octx, G = gaugeGeom(), need = CFG.energy.need;
+  const A0 = Math.PI * 1.08, A1 = Math.PI * 1.92, at = v => A0 + (A1 - A0) * clamp(v, 0, 1);
+  c.save(); c.lineCap = 'butt';
+  c.lineWidth = 6; c.strokeStyle = 'rgba(255,255,255,.35)'; c.beginPath(); c.arc(G.x, G.y, G.R, A0, A1); c.stroke();
+  c.strokeStyle = '#A24DFF'; c.beginPath(); c.arc(G.x, G.y, G.R, A0, at(S.E)); c.stroke();
+  if (extra > 0.005) { c.globalAlpha = 0.5 + 0.35 * Math.sin(performance.now() / 220); c.setLineDash([5, 4]); c.beginPath(); c.arc(G.x, G.y, G.R, at(S.E), at(S.E + extra)); c.stroke(); c.setLineDash([]); c.globalAlpha = 1; }
+  const an = at(need); c.strokeStyle = '#fff'; c.lineWidth = 2.5; c.beginPath(); c.moveTo(G.x + Math.cos(an) * (G.R - 9), G.y + Math.sin(an) * (G.R - 9)); c.lineTo(G.x + Math.cos(an) * (G.R + 9), G.y + Math.sin(an) * (G.R + 9)); c.stroke();
+  c.restore();
+}
+
+/* ---------- реакция интерфейса на центр внимания ---------- */
+function focusAt(p) {
+  const s = W2S(p); if (!s.ok) return 0;
+  const g = gazePoint(), m = Math.min(VW, VH), d = Math.hypot(s.x - g[0], s.y - g[1]);
+  return 1 - smooth(m * 0.1, m * 0.3, d);
+}
+function hunger() { const d = deficit(), t = performance.now() / 1000; return { d, p: 0.5 + 0.5 * Math.sin(t * (1.6 + 7 * d)) }; }
+// кольцо «лучший корм»: чем голоднее птица, тем ярче и чаще пульс
+function bestFood(p, Rm, a) {
+  const s = W2S(p); if (!s.ok || a < 0.01) return;
+  const h = hunger(), R = clamp(Rm * s.s, 14, 100);
+  const c = octx; c.save(); c.globalAlpha = a; uvGlow(s, R * (0.7 + 0.25 * h.d * h.p), 0.8 + 0.8 * h.d * h.p); c.restore();
+  ring(s, R, '#FFFFFF', 7, null, a * 0.8);
+  ring(s, R, '#A24DFF', 4.5, null, a);
+  const amp = 0.25 + 0.75 * h.d;
+  ring(s, R + 7 + (6 + 10 * h.d) * h.p, '#A24DFF', 2 + 2 * h.d, null, a * amp * (1 - 0.6 * h.p));
+}
+// подпорченная кисть: интерфейс «гасит» её — тусклое бурое пятно без свечения
+function spoiled(p, a) {
+  const s = W2S(p); if (!s.ok || a < 0.01) return;
+  const R = clamp(0.15 * s.s, 7, 60), c = octx;
+  c.save(); c.globalAlpha = a;
+  const g = c.createRadialGradient(s.x, s.y, 0, s.x, s.y, R);
+  g.addColorStop(0, 'rgba(92,80,62,.85)'); g.addColorStop(0.7, 'rgba(92,80,62,.6)'); g.addColorStop(1, 'rgba(92,80,62,0)');
+  c.fillStyle = g; c.beginPath(); c.arc(s.x, s.y, R, 0, 6.2832); c.fill();
+  c.restore();
+}
+function cross(p, a) {
+  const s = W2S(p); if (!s.ok || a < 0.01) return;
+  const d = clamp(0.16 * s.s, 9, 60), c = octx;
+  c.save(); c.globalAlpha = a; c.lineCap = 'round';
+  c.beginPath(); c.moveTo(s.x - d, s.y - d); c.lineTo(s.x + d, s.y + d); c.moveTo(s.x + d, s.y - d); c.lineTo(s.x - d, s.y + d);
+  c.strokeStyle = '#2A2410'; c.lineWidth = 7; c.stroke(); c.strokeStyle = '#FFD81A'; c.lineWidth = 4; c.stroke(); c.restore();
+}
+function spruceGlow() {
+  return;
+  const s = W2S([Y.spruce.x, 4.2, Y.spruce.z]); if (!s.ok) return;
+  const t = performance.now() / 1000, R = clamp(3.4 * s.s, 50, 520), c = octx;
+  c.save(); c.globalCompositeOperation = 'lighter'; c.globalAlpha = 0.75 + 0.25 * Math.sin(t * 1.4);
+  const g = c.createRadialGradient(s.x, s.y, R * 0.05, s.x, s.y, R);
+  g.addColorStop(0, 'rgba(255,190,90,.55)'); g.addColorStop(0.5, 'rgba(255,170,70,.28)'); g.addColorStop(1, 'rgba(255,170,70,0)');
+  c.fillStyle = g; c.beginPath(); c.ellipse(s.x, s.y, R * 0.7, R, 0, 0, 6.2832); c.fill(); c.restore();
+}
+// запах гусеницы: полупрозрачные зелёные клубочки от трещины в коре.
+// Путь пересчитывается каждый кадр, поэтому клубочки сразу тянутся туда, где сейчас птица,
+// и проходят чуть сбоку от неё
+function drawSmell() {
+  S.smellScr = [];
+  if (S.larvaEaten || S.night) return;
+  const t = performance.now() / 1000, src = Y.larva;
+  const dl = hdir(src, cam.p), side = [-dl[2], 0, dl[0]];
+  const aim = V3.add(cam.p, V3.add(V3.sc(side, 1.8), [0, -0.5, 0]));
+  const L = V3.len(V3.sub(aim, src)), mid = V3.add(V3.lerp(src, aim, 0.5), [0, Math.min(1.2, L * 0.08), 0]);
+  const c = octx, g = gazePoint(), K = 46;
+  let nd = 1e9; const puffs = [];
+  for (let k = 0; k < K; k++) {
+    const u = (t * 0.06 + k / K) % 1;
+    const base = V3.bez(src, mid, aim, u);
+    // клубочки расплываются по мере удаления от гусеницы
+    const spread = 0.1 + 0.9 * u, n1 = Math.sin(k * 12.9898 + t * 0.7), n2 = Math.sin(k * 78.233 + t * 0.5), n3 = Math.sin(k * 3.17 + t * 0.9);
+    const p = V3.add(base, [side[0] * n1 * spread, n2 * spread * 0.4, side[2] * n1 * spread + dl[2] * n3 * 0.1]);
+    if (V3.len(V3.sub(p, cam.p)) < 1.4) continue;
+    const s = W2S(p); if (!s.ok || s.x < -80 || s.x > VW + 80) continue;
+    puffs.push({ s, u, sz: 0.05 + 0.1 * u + 0.02 * (n3 + 1) });
+    nd = Math.min(nd, Math.hypot(s.x - g[0], s.y - g[1])); S.smellScr.push([s.x, s.y]);
+  }
+  const foc = 1 - smooth(30, 120, nd);
+  c.save(); c.fillStyle = '#C9E46A';
+  for (const q of puffs) {
+    const r = clamp(q.sz * q.s.s, 2.5, 46);
+    c.globalAlpha = (0.38 + 0.2 * foc) * (1 - 0.6 * q.u) * smooth(0, 0.04, q.u) * (1 - S.dayT * 0.3);
+    c.beginPath(); c.arc(q.s.x, q.s.y, r, 0, 6.2832); c.fill();
+  }
+  c.restore();
+  if (foc > 0.2) { const s = W2S(src); if (s.ok) { const R = clamp(0.12 * s.s, 12, 60); ring(s, R, '#2A3410', 6, null, foc * 0.8); ring(s, R, '#D4EE72', 3.5, null, foc); } }
+}
+function drawSounds() {
+  const c = octx, t = performance.now() / 1000;
+  for (const snd of S.sounds) {
+    if (snd.kind !== 'alarm') continue;
+    const alarm = snd.kind === 'alarm', col = alarm ? '255,106,94' : '255,255,255', u = snd.t / snd.dur, s = W2S(snd.p);
+    c.save(); c.lineWidth = alarm ? 3 : 1.6;
+    if (s.ok && s.x > 30 && s.x < VW - 30 && s.y > 30 && s.y < VH - 30) {
+      for (let k = 0; k < 3; k++) { const v = (u * 2.2 + k * 0.33) % 1; c.globalAlpha = (1 - v) * (alarm ? 0.95 : 0.5) * (1 - u * 0.5); c.strokeStyle = 'rgb(' + col + ')'; c.beginPath(); c.arc(s.x, s.y, 10 + v * (alarm ? 90 : 50), 0, 6.2832); c.stroke(); }
+      if (alarm) { c.globalAlpha = 1 - u; c.fillStyle = 'rgb(' + col + ')'; c.beginPath(); c.arc(s.x, s.y, 5, 0, 6.2832); c.fill(); }
+    } else {
+      const side = screenSide(snd.p);
+      const x = side > 0 ? VW + 10 : -10, y = VH * 0.32;
+      for (let k = 0; k < 4; k++) { const v = (u * 2.4 + k * 0.25) % 1; c.globalAlpha = (1 - v) * (alarm ? 0.95 : 0.45); c.strokeStyle = 'rgb(' + col + ')';
+        c.beginPath(); c.arc(x, y, 30 + v * 110, side > 0 ? Math.PI * 0.7 : -Math.PI * 0.3, side > 0 ? Math.PI * 1.3 : Math.PI * 0.3); c.stroke(); }
+    }
+    c.restore();
+  }
+}
+// укрытие при угрозе. Стрелка — человеческий знак, поэтому вместо неё:
+// всё вокруг темнеет, ель горит зелёным, а к ней бегут огоньки — движение птица замечает лучше всего
+function escapeArrow() {
+  S.escapeBtn = null;
+  if (!threatOn()) return;
+  const c = octx, t = performance.now() / 1000;
+  // ищем на ели точку, которая видна на экране (верх или низ могут быть за кадром)
+  let sp = [Y.spruce.x, 4.2, Y.spruce.z], s = W2S(sp), onScr = false;
+  for (const h of [3.5, 2.2, 5, 1.2, 6.5, 0.6]) { const q = [Y.spruce.x, h, Y.spruce.z], w = W2S(q); if (w.ok && w.x > 30 && w.x < VW - 30 && w.y > 30 && w.y < VH - 30) { sp = q; s = w; onScr = true; break; } }
+  let tx, ty, side = 0;
+  if (onScr) { tx = s.x; ty = s.y; }
+  else { side = screenSide(sp); tx = side > 0 ? VW + 20 : -20; ty = VH * 0.5; S.escapeBtn = { x: side > 0 ? VW - 70 : 70, y: ty }; }
+  c.save();
+  const R = onScr ? clamp(3.4 * s.s, 120, 560) : VH * 0.55;
+  const g = c.createRadialGradient(tx, ty, R * 0.35, tx, ty, R * 1.6);
+  g.addColorStop(0, 'rgba(8,12,16,0)'); g.addColorStop(1, 'rgba(8,12,16,.42)');
+  c.fillStyle = g; c.fillRect(0, 0, VW, VH);
+  if (!onScr) { const e = c.createLinearGradient(side > 0 ? VW : 0, 0, side > 0 ? VW - 160 : 160, 0); e.addColorStop(0, 'rgba(90,255,110,.55)'); e.addColorStop(1, 'rgba(90,255,110,0)'); c.fillStyle = e; c.fillRect(side > 0 ? VW - 160 : 0, 0, 160, VH); }
+  const ox = VW / 2, oy = VH * 0.72, mx = (ox + tx) / 2, my = Math.min(oy, ty) - 80;
+  for (let k = 0; k < 22; k++) {
+    const u = (t * 0.5 + k / 22) % 1, a = Math.sin(u * Math.PI);
+    const x = (1 - u) * (1 - u) * ox + 2 * u * (1 - u) * mx + u * u * tx, y = (1 - u) * (1 - u) * oy + 2 * u * (1 - u) * my + u * u * ty;
+    c.globalAlpha = a; c.fillStyle = '#B8FFC4'; c.shadowColor = '#5AFF6E'; c.shadowBlur = 16;
+    c.beginPath(); c.arc(x, y, 4 + 4 * a, 0, 6.2832); c.fill();
+  }
+  c.restore();
+}
+function reticle() {
+  if (!INPUT.known || !UI.introGone || S.night) return;
+  const c = octx, x = INPUT.x, y = INPUT.y, h = S.hover;
+  c.save();
+  c.lineWidth = 4; c.strokeStyle = 'rgba(20,16,30,.55)'; c.beginPath(); c.arc(x, y, 13, 0, 6.2832); c.stroke();
+  c.lineWidth = 2; c.strokeStyle = '#fff'; c.beginPath(); c.arc(x, y, 13, 0, 6.2832); c.stroke();
+  c.fillStyle = '#fff'; c.beginPath(); c.arc(x, y, 2.2, 0, 6.2832); c.fill();
+  if (h && !(S.fly && S.fly.forced)) {
+    const t = performance.now() / 1000, r = 19 + 2 * Math.sin(t * 6);
+    c.strokeStyle = h.kind === 'window' ? '#FFD81A' : '#fff'; c.lineWidth = 2.2;
+    for (let k = 0; k < 4; k++) { const a = k * Math.PI / 2 + Math.PI / 4; c.beginPath(); c.moveTo(x + Math.cos(a) * r, y + Math.sin(a) * r); c.lineTo(x + Math.cos(a) * (r + 7), y + Math.sin(a) * (r + 7)); c.stroke(); }
+  }
+  c.restore();
+}
+
+function drawMarks() {
+  if (S.night) return;
+  const H = hunger();
+  // рябина: свежая кисть и подпорченные
+  let fr = 0; for (const c of Y.clusters) if (c.kind === 'rowan') fr = Math.max(fr, focusAt(c.pos));
+  const aR = 0.18 + 0.82 * fr;
+  for (const c of Y.clusters) if (c.kind === 'rowan' && c.q <= 0.6) spoiled(c.pos, 0.35 + 0.65 * fr);
+  const tb = target('c' + Y.best.id); if (tb && tb.stock > 0.05) bestFood(Y.best.pos, 0.2, aR);
+  // черноплодка
+  let fa = 0; for (const c of Y.clusters) if (c.kind === 'aronia') fa = Math.max(fa, focusAt(c.pos));
+  const ta = target('c' + Y.aroBest.id); if (ta && ta.stock > 0.05) bestFood(Y.aroBest.pos, 0.17, 0.18 + 0.82 * fa);
+  // кормушка и сало
+  const tf = target('feeder'); if (tf.stock > 0.05) { const f = focusAt(tf.pos); if (f > 0.02) bestFood(tf.pos, 0.3, f * 0.9); }
+  // стекло
+  const P = Y.house.glass.map(W2S);
+  if (P.every(p => p.ok)) { const towards = S.fly && S.fly.tg.id === 'window'; hatch(P, towards ? 1 : 0.12 + 0.88 * focusAt(Y.house.W)); }
+  // кошка
+  // кошка — как ястреб: тревога, кольцо или стрелки с той стороны; без тревоги — едва заметное кольцо у тени при взгляде
+  const K = S.cat.stalk;
+  if (K && K.warned && !K.struck) threat(catThreatPos(), 1, catIcon);
+
+  // ястреб
+  if (S.hawk.active && S.hawk.warned && !S.hawk.struck) threat(S.hawk.p, 1);
+}
+
+// белёсая пелена по краям поля зрения: голод и слабость; рассеивается, когда птица наедается
+function frost() {
+  const d = deficit(); if (S.night || d <= 0.001) return;
+  const c = octx, a = clamp(d * 1.25, 0, 1), t = performance.now() / 1000;
+  c.save();
+  const r0 = Math.min(VW, VH) * (0.55 - 0.3 * a) * (1 + 0.03 * Math.sin(t * 1.3));
+  const g = c.createRadialGradient(VW / 2, VH / 2, r0, VW / 2, VH / 2, Math.hypot(VW, VH) * 0.52);
+  g.addColorStop(0, 'rgba(236,236,228,0)'); g.addColorStop(0.55, 'rgba(232,232,224,' + (0.5 * a).toFixed(3) + ')'); g.addColorStop(1, 'rgba(244,244,238,' + Math.min(0.95, 1.1 * a).toFixed(3) + ')');
+  c.fillStyle = g; c.fillRect(0, 0, VW, VH);
+  c.restore();
+}
+function satiation() {
+  if (S.satT == null || S.satT > 3) return;
+  const c = octx, k = 1 - S.satT / 3;
+  c.save(); const g = c.createRadialGradient(VW / 2, VH / 2, Math.min(VW, VH) * 0.2, VW / 2, VH / 2, Math.hypot(VW, VH) * 0.6);
+  g.addColorStop(0, 'rgba(255,200,110,0)'); g.addColorStop(1, 'rgba(255,190,90,' + (0.5 * k).toFixed(3) + ')');
+  c.fillStyle = g; c.fillRect(0, 0, VW, VH); c.restore();
+}
+function renderOverlay() {
+  const c = octx;
+  c.setTransform(DPR, 0, 0, DPR, 0, 0); c.clearRect(0, 0, VW, VH);
+  if (false) {
+    const w = VW * 0.14;
+    let g = c.createLinearGradient(0, 0, w, 0); g.addColorStop(0, 'rgba(238,236,244,.38)'); g.addColorStop(1, 'rgba(238,236,244,0)'); c.fillStyle = g; c.fillRect(0, 0, w, VH);
+    g = c.createLinearGradient(VW, 0, VW - w, 0); g.addColorStop(0, 'rgba(238,236,244,.38)'); g.addColorStop(1, 'rgba(238,236,244,0)'); c.fillStyle = g; c.fillRect(VW - w, 0, w, VH);
+  }
+  spruceGlow();
+  drawUV();
+  drawSmell();
+  drawMarks();
+  drawSounds();
+  escapeArrow();
+  frost();
+  satiation();
+  reticle();
+  if (S.mode === 'stunned') { c.save(); c.globalAlpha = 0.55 * (1 - smooth(1.6, 2.8, S.stun)); const g = c.createRadialGradient(VW / 2, VH / 2, Math.min(VW, VH) * 0.15, VW / 2, VH / 2, Math.max(VW, VH) * 0.7); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(10,8,20,1)'); c.fillStyle = g; c.fillRect(0, 0, VW, VH); c.restore(); }
+  if (S.flash) { c.save(); c.globalAlpha = 0.55 * (1 - S.flash.t / S.flash.dur); c.fillStyle = 'rgb(' + S.flash.col + ')'; c.fillRect(0, 0, VW, VH); c.restore(); }
+}
+
+function render() {
+  if (!PROG) return;
+  computeCamera();
+  renderGL(false, null);
+  renderOverlay();
+}
+
+/* =====================================================================
+   8. СОСТОЯНИЕ ДНЯ
+   ===================================================================== */
+let rngSim = makeRng(1);
+function resetState(seed) {
+  currentSeed = seed;
+  rngGen = makeRng(seed); rngSim = makeRng(seed * 7 + 3);
+  Y = generateYard(rngGen);
+  Y.aroBest = Y.clusters.filter(c => c.kind === 'aronia').sort((a, b) => b.q - a.q)[0];
+  S = { t: 0, dayT: 0, E: CFG.energy.start, mode: 'perch', fly: null, feed: null, here: null, perchKey: 'roost',
+    yawT: 0, pitchT: 0, yawBase: 0, pitchBase: -0.12, peck: 0, shake: 0, flash: null, msg: null, stun: 0, fall: null,
+    hawk: { active: false, p: null }, hawkDone: false, cat: { p: [Y.cat.x, 0, Y.cat.z], stalk: null, back: null, flick: 0, seen: false },
+    smell: [], smellAcc: 0, larvaEaten: false, larvaOut: 0, sounds: [], callT: 6,
+    wins: [], mistakes: [], hover: null, hopT: 0, fed: false, satT: null, moving: false, idle: 0, catT: -99, escapeBtn: null, night: false, nightT: 0, sleep: false, duskSaid: false, finaleShown: false };
+  S.targets = buildTargets();
+  cam.p = perch('roost').slice(); cam.roll = 0;
+  const look = [lerp(Y.feeder.x, Y.rowan.x, 0.5), 1.6, lerp(Y.feeder.z, Y.rowan.z, 0.5)];
+  S.yawBase = Math.atan2(look[0] - cam.p[0], look[2] - cam.p[2]);
+  S.yawT = cam.yaw = S.yawBase; S.pitchT = cam.pitch = S.pitchBase;
+  // запах успевает растечься по двору к началу дня
+  for (let k = 0; k < 190; k++) updateSmell(0.1);
+  if (PROG) rebuildWorld();
+  resetUI();
+}
+function restart(seed) { setPaused(false); resetState(seed); UI.introGone = true; UI.intro.classList.add('gone'); say(seed === CFG.seed ? 'Тот же день заново (зерно 30).' : 'Новый день: зерно ' + seed + '. Другие деревья и кисти, гусеница в другом месте.', '', 4); }
+
+/* =====================================================================
+   9. ГЛАВНЫЙ ЦИКЛ
+   ===================================================================== */
+function update(dt) {
+  if (UI.introGone) {
+    let rem = dt * (fast ? CFG.fast : 1);
+    while (rem > 1e-6) { const h = Math.min(0.04, rem); updateGame(h); rem -= h; }
+  }
+  if (S.night && S.nightT > 2.2 && !S.finaleShown) { S.finaleShown = true; showFinale(); }
+}
+
+/* =====================================================================
+   10. ЗВУК: тревожный крик «сиит», перекличка, удар о стекло
+   ===================================================================== */
+let AC = null;
+function ensureAudio() {
+  try { if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)(); if (AC.state === 'suspended') AC.resume(); } catch (e) { AC = null; }
+}
+function tone(f0, f1, t0, dur, vol, type) {
+  const o = AC.createOscillator(), g = AC.createGain();
+  o.type = type || 'sine'; o.frequency.setValueAtTime(f0, t0); o.frequency.exponentialRampToValueAtTime(f1, t0 + dur);
+  g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(vol, t0 + 0.03); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  o.connect(g).connect(AC.destination); o.start(t0); o.stop(t0 + dur + 0.02);
+}
+function sound(kind) {
+  if (!soundOn || !AC || fast) return;
+  const t = AC.currentTime + 0.02;
+  // тревога: тонкий высокий «сиит» — на ястреба; резкий стрекот — на кошку
+  if (kind === 'seet') { for (let k = 0; k < 4; k++) tone(6400, 5600, t + k * 0.5, 0.4, 0.16); }
+  else if (kind === 'mob') { for (let k = 0; k < 6; k++) tone(3400, 2600, t + k * 0.13, 0.08, 0.12, 'square'); }
+}
+
+/* =====================================================================
+   11. СЛОЙ ДЛЯ ЧЕЛОВЕКА
+   ===================================================================== */
+const UI = {
+  human: document.getElementById('human'), stageLine: document.getElementById('stageLine'), phase: document.getElementById('phase'),
+  intro: document.getElementById('intro'), pause: document.getElementById('pauseNote'), finale: document.getElementById('finale'),
+  finaleText: document.getElementById('finaleText'), about: document.getElementById('about'),
+  sun: document.getElementById('sun'), resFill: document.getElementById('resFill'), resNeed: document.getElementById('resNeed'), resTxt: document.getElementById('resTxt'),
+  taskBox: document.getElementById('taskBox'), legend: document.getElementById('legend'),
+  sr: document.getElementById('srStatus'), last: {}, timer: 0, introGone: false, gazeKey: '', gazeT: 0
+};
+function resetUI() { UI.introGone = false; UI.intro.classList.remove('gone'); UI.finale.classList.remove('on'); UI.last = {}; UI.timer = 1; }
+function hideIntro() { if (!UI.introGone) { UI.introGone = true; UI.intro.classList.add('gone'); ensureAudio(); } }
+UI.intro.addEventListener('pointerdown', e => { e.preventDefault(); hideIntro(); });
+document.querySelector('[data-legend]').addEventListener('click', e => { const m = UI.legend.classList.toggle('min'); e.target.textContent = m ? 'развернуть' : 'свернуть'; });
+function announce(t) { if (UI && UI.sr) UI.sr.textContent = t; }
+function setPaused(v) { paused = v; UI.pause.classList.toggle('on', paused && !aboutOpen); }
+let pausedBeforeAbout = false;
+function openAbout() { aboutOpen = true; pausedBeforeAbout = paused; paused = true; UI.pause.classList.remove('on'); UI.about.classList.add('open'); UI.about.setAttribute('aria-hidden', 'false'); UI.about.focus({ preventScroll: true }); }
+function closeAbout() { aboutOpen = false; UI.about.classList.remove('open'); UI.about.setAttribute('aria-hidden', 'true'); setPaused(pausedBeforeAbout); canvas.focus({ preventScroll: true }); }
+document.querySelectorAll('[data-close-about]').forEach(el => { el.addEventListener('click', closeAbout); el.addEventListener('keydown', e => { if (e.key === 'Enter') closeAbout(); }); });
+
+// что сейчас в центре внимания птицы — короткое пояснение для человека
+function gazeSubject() {
+  if (!INPUT.known) return '';
+  const h = S.hover;
+  if (h) return h.kind === 'berries' ? (h.c.kind === 'rowan' ? (h.c.q > 0.6 ? 'rowanFresh' : 'rowanStale') : 'aronia') : h.kind;
+  const g = gazePoint();
+  for (const p of (S.smellScr || [])) if (Math.hypot(p[0] - g[0], p[1] - g[1]) < 40) return 'smell';
+  return '';
+}
+const GAZE_LINE = {
+  rowanFresh: 'Рябина: в ультрафиолете светятся все кисти. Кольцо — самая вкусная, питательность 15; обычные — 10.',
+  rowanStale: 'Подпорченная кисть: налёт стёрся, интерфейс показывает её тусклой. Питательность 5.',
+  aronia: 'Черноплодка. Кольцо — на самой питательной кисти.',
+  feeder: 'Кормушка: много семечек, но сюда прилетает ястреб. Будьте готовы лететь в ель.',
+  window: 'Это стекло: в нём отражается двор. Интерфейс заштриховал его — прохода нет.',
+  larva: 'Погрызенные листья берёзы: оттуда тянется запах, там гусеница.',
+  bark: 'Кора берёзы: немного насекомых.',
+  roost: 'Ель — укрытие от ястреба и место ночлега.',
+  smell: 'Струйка запаха: она тянется от добычи. Интерфейс отметил источник кольцом.'
+};
+function contextLine() {
+  if (S.msg) return { text: S.msg.text, cls: S.msg.kind };
+  if (S.night) return { text: 'Ночь. Птица спит в ели.', cls: '' };
+  if (S.mode === 'feed' && S.feed) return { text: S.feed.tg.kind === 'larva' ? 'Птица склёвывает гусеницу с листа.' : 'Птица клюёт — запас растёт.', cls: '' };
+  if (S.fly) return { text: 'Птица летит.', cls: '' };
+  const k = UI.gazeKey;
+  if (k === 'roost' && S.E >= CFG.energy.need) return { text: 'Запаса хватает — можно ночевать в ели.', cls: 'good' };
+  if (k && GAZE_LINE[k]) return { text: GAZE_LINE[k], cls: '' };
+  const d = deficit();
+  if (d > 0) return { text: d > 0.4 ? 'Белёсая пелена по краям — птица голодна. Ищите корм: интерфейс отвечает на то, на что она смотрит.' : 'Пелена рассеивается, но до нормы на ночь ещё не хватает.', cls: '' };
+  return { text: 'Пелена рассеялась: запаса хватает. Можно лететь в ель на ночлег.', cls: 'good' };
+}
+function phaseName() {
+  const u = S.dayT;
+  return S.night ? 'ночь' : u < 0.12 ? 'рассвет' : u < 0.4 ? 'утро' : u < 0.66 ? 'день' : u < 0.85 ? 'предвечерье' : 'сумерки';
+}
+function updateUI(dt) {
+  // пояснение меняется не чаще, чем раз в ~0.8 с
+  const gk = gazeSubject();
+  if (gk !== UI.gazeCand) { UI.gazeCand = gk; UI.gazeT = 0; } else UI.gazeT += dt;
+  if (UI.gazeT > 0.6 && UI.gazeKey !== gk) UI.gazeKey = gk;
+  UI.timer += dt; if (UI.timer < 0.1) return; UI.timer = 0;
+  if (!humanOn) return;
+  const o = contextLine();
+  if (o.text !== UI.last.line) {
+    UI.last.line = o.text; clearTimeout(UI.fadeT);
+    UI.stageLine.classList.add('fade');
+    UI.fadeT = setTimeout(() => { UI.stageLine.textContent = o.text; UI.stageLine.className = 'line' + (o.cls ? ' ' + o.cls : ''); }, REDUCED ? 0 : 250);
+  }
+  const ph = 'поиск еды в городской среде · ' + phaseName(); if (ph !== UI.last.ph) { UI.phase.textContent = ph; UI.last.ph = ph; }
+  UI.resFill.style.width = (clamp(S.E, 0, 1) * 100).toFixed(1) + '%';
+  UI.resNeed.style.left = CFG.energy.need * 100 + '%';
+  UI.resTxt.textContent = pct(S.E) + ' / ' + pct(CFG.energy.need);
+  UI.epTop = VW < 760 ? UI.taskBox.getBoundingClientRect().top : 0;
+}
+function showFinale() {
+  const ok = S.E >= CFG.energy.need;
+  let h = '<h2>' + (ok ? 'Птица ночует в ели с запасом ' + pct(S.E) + ' — хватит до утра.' : 'Птица ночует с запасом ' + pct(S.E) + ' при норме ' + pct(CFG.energy.need) + ' — ночь будет тяжёлой.') + '</h2>';
+  const items = S.wins.map(w => '<li>' + w + '</li>').concat(S.mistakes.map(m => '<li class="bad">' + m + '</li>'));
+  if (items.length) h += 'За день птица:<ul>' + items.join('') + '</ul>';
+  UI.finaleText.innerHTML = h;
+  UI.finale.classList.add('on');
+}
+
+/* =====================================================================
+   12. ЗАПУСК
+   ===================================================================== */
+function resize() {
+  VW = Math.max(1, innerWidth); VH = Math.max(1, innerHeight);
+  DPR = Math.min(devicePixelRatio || 1, CFG.dprMax);
+  for (const cv of [canvas, ov]) { cv.width = Math.round(VW * DPR); cv.height = Math.round(VH * DPR); cv.style.width = VW + 'px'; cv.style.height = VH + 'px'; }
+}
+addEventListener('resize', resize);
+let lastFrame = performance.now(), loopStarted = false;
+function frame(now) {
+  let dt = (now - lastFrame) / 1000; lastFrame = now;
+  if (!(dt > 0)) dt = 0; dt = Math.min(dt, CFG.dtMax);
+  if (!paused && !aboutOpen && !document.hidden && !window.__freeze) update(dt);
+  if (!aboutOpen) { updateHover(); render(); }
+  updateUI(dt);
+  requestAnimationFrame(frame);
+}
+(function countReflection() {
+  const r = document.getElementById('reflection'), out = document.getElementById('wordCount');
+  if (!r || !out) return;
+  const n = (r.textContent.match(/[A-Za-zА-Яа-яЁё0-9][A-Za-zА-Яа-яЁё0-9\-]*/g) || []).length;
+  out.textContent = 'Объём черновика: ' + n + ' слов (требуется 400–600).';
+})();
+function boot() {
+  resize();
+  let ok = false;
+  try { ok = initGL(); } catch (e) { console.warn('WebGL:', e.message); ok = false; }
+  if (!ok) document.getElementById('noGL').style.display = 'block';
+  resetState(CFG.seed);
+  if (!loopStarted) { loopStarted = true; requestAnimationFrame(t => { lastFrame = t; frame(t); }); }
+  window.__B = { get S() { return S; }, get Y() { return Y; }, cam, CFG, handleKey, W2S, hideIntro, target, flyTo, clickAt,
+    simulate(sec) { let t = 0; while (t < sec) { updateGame(0.04); t += 0.04; } },
+    until(fn, max) { let t = 0; while (!fn() && t < (max || 200)) { updateGame(0.04); t += 0.04; } return t; },
+    go(id) { flyTo(target(id)); let t = 0; while (S.fly && t < 10) { updateGame(0.04); t += 0.04; } },
+    gaze(x, y) { INPUT.known = true; INPUT.x = x; INPUT.y = y; }, noGaze() { INPUT.known = false; },
+    look(p) { S.yawBase = Math.atan2(p[0] - cam.p[0], p[2] - cam.p[2]); S.pitchBase = Math.atan2(p[1] - cam.p[1], Math.hypot(p[0] - cam.p[0], p[2] - cam.p[2])); cam.yaw = S.yawT = S.yawBase; cam.pitch = S.pitchT = S.pitchBase; } };
+}
+boot();
+})();
+</script>
+</body>
+</html>
